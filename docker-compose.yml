@@ -1,0 +1,234 @@
+version: '3.8'
+
+# WHY docker-compose?
+# One command starts your ENTIRE infrastructure locally.
+# No installing PostgreSQL, Redis, or Kafka on your machine.
+# Everything runs in isolated containers. Delete them anytime.
+
+services:
+
+  # ─── DATABASES ────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: tradeforge-postgres
+    # WHY alpine? Smaller image size (~50MB vs ~200MB). Same functionality.
+    environment:
+      POSTGRES_USER: tradeforge
+      POSTGRES_PASSWORD: tradeforge123
+      POSTGRES_DB: tradeforge
+    ports:
+      - "5433:5432"   # host:container — mapped to 5433 to avoid conflict with local PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # data persists across restarts
+      - ./infrastructure/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradeforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: tradeforge-redis
+    # WHY Redis? Sub-millisecond reads for live prices and JWT blacklist.
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass tradeforge123
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "tradeforge123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MESSAGE STREAMING ────────────────────────────────────────────────────
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: tradeforge-kafka
+    # WHY KRaft mode? No Zookeeper needed. Simpler setup, production future.
+    # WHY Kafka at all? Decouples market data source from all consumers.
+    # Market Service publishes ticks once. Any number of services consume.
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── SERVICE DISCOVERY ────────────────────────────────────────────────────
+
+  eureka-server:
+    build: ./backend/eureka-server
+    container_name: tradeforge-eureka
+    # WHY Eureka? Every microservice registers here on startup.
+    # API Gateway discovers them dynamically — no hardcoded service URLs.
+    # Scale Order Service to 3 instances → Gateway load balances automatically.
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── BACKEND MICROSERVICES ────────────────────────────────────────────────
+
+  api-gateway:
+    build: ./backend/api-gateway
+    container_name: tradeforge-gateway
+    # WHY API Gateway? Angular calls ONE URL. Gateway routes internally.
+    # Also handles: JWT validation, rate limiting, CORS — once, centrally.
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_URI=http://eureka-server:8761/eureka
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=tradeforge123
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  auth-service:
+    build: ./backend/auth-service
+    container_name: tradeforge-auth
+    # WHY separate Auth Service? Single responsibility.
+    # Auth logic changes independently of Order or Portfolio logic.
+    # Can be scaled independently if login traffic spikes.
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres:5432/tradeforge
+      - DB_USER=tradeforge
+      - DB_PASS=tradeforge123
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=tradeforge123
+      - EUREKA_URI=http://eureka-server:8761/eureka
+      - JWT_SECRET=tradeforge-super-secret-jwt-key-change-in-production-min-256-bits
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  market-service:
+    build: ./backend/market-service
+    container_name: tradeforge-market
+    # WHY separate Market Service? Connects to Finnhub WebSocket externally.
+    # Publishes ticks to Kafka. Completely independent of user/order logic.
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=tradeforge123
+      - EUREKA_URI=http://eureka-server:8761/eureka
+      - FINNHUB_API_KEY=demo   # Replace with your free Finnhub key
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  order-service:
+    build: ./backend/order-service
+    container_name: tradeforge-order
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres:5432/tradeforge
+      - DB_USER=tradeforge
+      - DB_PASS=tradeforge123
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - EUREKA_URI=http://eureka-server:8761/eureka
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  portfolio-service:
+    build: ./backend/portfolio-service
+    container_name: tradeforge-portfolio
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_URL=jdbc:postgresql://postgres:5432/tradeforge
+      - DB_USER=tradeforge
+      - DB_PASS=tradeforge123
+      - EUREKA_URI=http://eureka-server:8761/eureka
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  websocket-gateway:
+    build: ./backend/websocket-gateway
+    container_name: tradeforge-ws
+    # WHY dedicated WS service? WebSocket connections are long-lived.
+    # Keeping them separate prevents WS thread exhaustion from killing REST APIs.
+    ports:
+      - "8088:8088"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=tradeforge123
+      - EUREKA_URI=http://eureka-server:8761/eureka
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─── FRONTEND ─────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tradeforge-frontend
+    ports:
+      - "4200:80"   # Nginx serves Angular on port 80 inside container
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:

@@ -1,0 +1,686 @@
+// Settings page uses a two-column layout: section nav left, content right.
+// WHY this layout? macOS System Settings / VS Code Settings UX pattern.
+// Power users immediately recognize the nav-on-left, detail-on-right pattern.
+
+:host {
+  display: block;
+  height: 100%;
+  overflow-y: auto;
+}
+
+// ── Page Container ──────────────────────────────────────────────────────────
+.settings-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--tf-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tf-space-lg);
+}
+
+// ── Header ─────────────────────────────────────────────────────────────────
+.settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--tf-text-primary);
+  letter-spacing: -0.3px;
+}
+
+.settings-subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+}
+
+.reset-btn {
+  color: var(--tf-text-secondary) !important;
+  border-color: var(--tf-border) !important;
+  font-size: 12px !important;
+  height: 34px !important;
+
+  mat-icon { font-size: 16px; margin-right: 4px; }
+
+  &:hover {
+    color: var(--tf-red) !important;
+    border-color: var(--tf-red) !important;
+  }
+}
+
+// ── Two-Column Body ─────────────────────────────────────────────────────────
+.settings-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--tf-space-lg);
+  align-items: start;
+}
+
+// ── Section Navigation ──────────────────────────────────────────────────────
+.sections-nav {
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+}
+
+.section-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: var(--tf-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+  font-family: 'Inter', sans-serif;
+
+  .section-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+  .section-label { flex: 1; }
+
+  .section-chevron {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    color: var(--tf-text-muted);
+  }
+
+  .section-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--tf-cyan);
+    color: #000;
+    border-radius: 10px;
+    padding: 1px 6px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  &:hover {
+    background: var(--tf-bg-elevated);
+    color: var(--tf-text-primary);
+    .section-chevron { opacity: 1; }
+  }
+
+  &.section-btn--active {
+    background: rgba(57, 208, 216, 0.1);
+    color: var(--tf-cyan);
+    border-left: 3px solid var(--tf-cyan);
+    padding-left: 11px;
+    .section-icon { color: var(--tf-cyan); }
+    .section-chevron { opacity: 1; color: var(--tf-cyan); }
+  }
+
+  // Divider between items
+  & + & {
+    border-top: 1px solid var(--tf-border-subtle);
+  }
+}
+
+// ── Section Content Panel ───────────────────────────────────────────────────
+.section-content {
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-lg);
+  overflow: hidden;
+}
+
+.section-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+// ── Setting Group (a titled cluster of related settings) ────────────────────
+.setting-group {
+  padding: var(--tf-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tf-space-md);
+}
+
+.group-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.group-icon {
+  color: var(--tf-cyan);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.group-title {
+  margin: 0 0 3px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+}
+
+.group-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+  line-height: 1.5;
+}
+
+// ── Individual Setting Row ──────────────────────────────────────────────────
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  gap: 20px;
+  border-top: 1px solid var(--tf-border-subtle);
+
+  &:first-child { border-top: none; }
+
+  &.setting-row--danger {
+    background: rgba(248, 81, 73, 0.03);
+  }
+}
+
+.setting-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-icon {
+  color: var(--tf-text-secondary);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+
+  &.setting-icon--warn { color: var(--tf-yellow); }
+}
+
+.setting-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+  line-height: 1.5;
+}
+
+// ── Theme Cards (visual preview) ─────────────────────────────────────────────
+.theme-cards {
+  display: flex;
+  gap: 16px;
+}
+
+.theme-card {
+  border: 2px solid var(--tf-border);
+  border-radius: var(--tf-radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 140px;
+
+  &:hover { border-color: var(--tf-border-muted); }
+
+  &.theme-card--selected {
+    border-color: var(--tf-cyan);
+    box-shadow: 0 0 0 3px rgba(57, 208, 216, 0.15);
+  }
+}
+
+.theme-preview {
+  width: 140px;
+  height: 90px;
+  display: flex;
+  overflow: hidden;
+
+  &.theme-preview--dark {
+    background: #0d1117;
+    .preview-sidebar { background: #010409; }
+    .preview-bar { background: #161b22; }
+    .preview-row { background: #21262d; }
+  }
+
+  &.theme-preview--light {
+    background: #f6f8fa;
+    .preview-sidebar { background: #ffffff; border-right: 1px solid #d0d7de; }
+    .preview-bar { background: #ffffff; border-bottom: 1px solid #d0d7de; }
+    .preview-row { background: #e6e9ec; }
+  }
+}
+
+.preview-sidebar {
+  width: 30px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.preview-bar {
+  height: 14px;
+  border-radius: 2px;
+}
+
+.preview-row {
+  height: 10px;
+  border-radius: 2px;
+  &.preview-row--short { width: 60%; }
+}
+
+.theme-card-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+  background: var(--tf-bg-elevated);
+  border-top: 1px solid var(--tf-border);
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--tf-cyan); }
+}
+
+// ── Color Scheme Options ─────────────────────────────────────────────────────
+.color-scheme-options {
+  display: flex;
+  gap: 12px;
+}
+
+.scheme-option {
+  flex: 1;
+  border: 2px solid var(--tf-border);
+  border-radius: var(--tf-radius-md);
+  padding: 14px 16px;
+  background: var(--tf-bg-elevated);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &:hover { border-color: var(--tf-border-muted); }
+
+  &.scheme-option--selected {
+    border-color: var(--tf-cyan);
+    background: rgba(57, 208, 216, 0.05);
+  }
+}
+
+.scheme-preview {
+  display: flex;
+  gap: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.scheme-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+  font-weight: 500;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--tf-cyan); }
+}
+
+// ── Chip Selector (Order Type / Exchange) ────────────────────────────────────
+.chip-selector, .squareoff-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.type-chip {
+  padding: 6px 16px;
+  border: 1px solid var(--tf-border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--tf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--tf-border-muted);
+    color: var(--tf-text-primary);
+  }
+
+  &.type-chip--active {
+    background: rgba(57, 208, 216, 0.12);
+    border-color: var(--tf-cyan);
+    color: var(--tf-cyan);
+  }
+}
+
+.order-type-desc { margin-top: 4px; }
+.type-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+  background: var(--tf-bg-elevated);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-sm);
+  padding: 10px 14px;
+  line-height: 1.5;
+
+  strong { color: var(--tf-text-primary); }
+}
+
+// ── Expert Badge ─────────────────────────────────────────────────────────────
+.badge-expert {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--tf-yellow);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  padding: 1px 6px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+// ── Notification Icon Wraps ──────────────────────────────────────────────────
+.notif-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--tf-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon { font-size: 18px; }
+
+  &.notif-icon-wrap--blue   { background: rgba(88, 166, 255, 0.1);  mat-icon { color: var(--tf-blue);  } }
+  &.notif-icon-wrap--yellow { background: rgba(210, 153, 34, 0.1);  mat-icon { color: var(--tf-yellow); } }
+  &.notif-icon-wrap--green  { background: rgba(63, 185, 80, 0.1);   mat-icon { color: var(--tf-green); } }
+}
+
+// ── Info Banner ───────────────────────────────────────────────────────────────
+.info-banner {
+  margin: 4px 20px 16px;
+  padding: 12px 16px;
+  background: rgba(88, 166, 255, 0.07);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  border-radius: var(--tf-radius-md);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+  line-height: 1.5;
+
+  mat-icon { color: var(--tf-blue); font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+}
+
+// ── Security Info Cards ───────────────────────────────────────────────────────
+.security-info-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--tf-radius-md);
+  border: 1px solid;
+  font-size: 12px;
+  line-height: 1.5;
+
+  mat-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+
+  div { display: flex; flex-direction: column; gap: 2px; }
+  strong { font-size: 13px; font-weight: 600; }
+  span { color: var(--tf-text-secondary); }
+
+  &.info-card--green  { background: rgba(63, 185, 80, 0.06);   border-color: rgba(63, 185, 80, 0.2);  mat-icon { color: var(--tf-green);  } strong { color: var(--tf-green);  } }
+  &.info-card--blue   { background: rgba(88, 166, 255, 0.06);  border-color: rgba(88, 166, 255, 0.2); mat-icon { color: var(--tf-blue);   } strong { color: var(--tf-blue);   } }
+  &.info-card--yellow { background: rgba(210, 153, 34, 0.06);  border-color: rgba(210, 153, 34, 0.2); mat-icon { color: var(--tf-yellow); } strong { color: var(--tf-yellow); } }
+}
+
+// ── 2FA Status ────────────────────────────────────────────────────────────────
+.status-enabled {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tf-green);
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
+.status-disabled { color: var(--tf-text-muted); }
+
+// ── About Section ─────────────────────────────────────────────────────────────
+.about-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: var(--tf-space-lg);
+}
+
+.about-logo {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--tf-cyan), #0ea5e9);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: #000;
+  flex-shrink: 0;
+}
+
+.about-info {
+  h2 { margin: 0 0 4px; font-size: 20px; font-weight: 700; color: var(--tf-text-primary); }
+}
+
+.about-version {
+  margin: 0 0 3px;
+  font-size: 12px;
+  color: var(--tf-cyan);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.about-tagline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+}
+
+.about-stack {
+  padding: var(--tf-space-lg);
+}
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: var(--tf-space-md);
+}
+
+.stack-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--tf-bg-elevated);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-sm);
+}
+
+.stack-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stack-version {
+  font-size: 11px;
+  color: var(--tf-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stack-role {
+  font-size: 11px;
+  color: var(--tf-text-secondary);
+  margin-left: auto;
+}
+
+.about-footer {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+}
+
+// ── Light Theme Adaptations ───────────────────────────────────────────────────
+// WHY here? These are settings-specific elements that need extra care in light mode.
+[data-theme="light"] {
+  .theme-preview--dark .preview-content { padding: 8px; }
+  .type-chip { background: var(--tf-bg-elevated); }
+  .stack-item { background: var(--tf-bg-app); }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .settings-container {
+    padding: var(--tf-space-md);
+    gap: var(--tf-space-md);
+  }
+
+  // Single-column layout on mobile
+  .settings-body {
+    grid-template-columns: 1fr;
+    gap: var(--tf-space-md);
+  }
+
+  // Section nav → horizontal scrollable tab strip
+  .sections-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--tf-radius-md);
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .section-btn {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    min-width: 72px;
+    border-top: none !important;
+    border-right: 1px solid var(--tf-border-subtle);
+    font-size: 11px;
+    white-space: nowrap;
+
+    &:last-child { border-right: none; }
+
+    // Active: bottom border instead of left border
+    &.section-btn--active {
+      border-left: none;
+      padding-left: 14px;
+      border-bottom: 3px solid var(--tf-cyan);
+    }
+
+    .section-chevron { display: none; }
+    .section-label { font-size: 10px; font-weight: 600; }
+  }
+
+  // Setting rows: stack label above the control on mobile
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  // Theme cards: smaller to fit side by side
+  .theme-cards { gap: 10px; }
+  .theme-card  { width: 110px; }
+  .theme-preview { width: 110px; height: 70px; }
+
+  // Stack grid: 2 columns
+  .stack-grid { grid-template-columns: 1fr 1fr; }
+
+  // About hero: stack
+  .about-hero { flex-direction: column; gap: 14px; text-align: center; }
+
+  // Color scheme cards: stack
+  .color-scheme-options { flex-direction: column; }
+
+  .settings-header { gap: 8px; }
+  .settings-title  { font-size: 18px; }
+
+  .info-banner { margin: 4px 14px 12px; }
+  .security-info-cards { padding: 0 14px 14px; }
+}
+
+@media (max-width: 480px) {
+  // On very small phones: theme cards wrap
+  .theme-cards { flex-wrap: wrap; }
+  // Stack grid: single column
+  .stack-grid { grid-template-columns: 1fr; }
+  .setting-row { padding: 12px; }
+  .setting-group { padding: var(--tf-space-md); }
+}

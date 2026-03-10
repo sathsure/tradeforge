@@ -1,0 +1,156 @@
+<!--
+  Shell Layout — professional trading terminal structure.
+  WHY sidebar not top nav?
+  Trading apps need HORIZONTAL space for data tables and charts.
+  Bloomberg, Kite, TradingView all use left-side nav for this reason.
+-->
+<div class="shell">
+
+  <!-- ── Left Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <div class="brand">
+      <div class="brand-logo-wrap">
+        <span class="brand-logo-text">TF</span>
+      </div>
+      <span class="brand-name">TradeForge</span>
+    </div>
+
+    <mat-divider class="brand-divider"></mat-divider>
+
+    <!-- Navigation Items -->
+    <!-- WHY @for with track? Angular 18 control flow. track improves DOM recycling. -->
+    <nav class="nav" aria-label="Main navigation">
+      @for (item of navItems; track item.path) {
+        <a
+          class="nav-item"
+          [class.nav-item--settings]="item.path === '/settings'"
+          [routerLink]="item.path"
+          routerLinkActive="nav-item--active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          [matTooltip]="item.label"
+          matTooltipPosition="right"
+          [attr.aria-label]="item.label"
+        >
+          <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+    <mat-divider></mat-divider>
+
+    <!-- User Profile & Logout -->
+    @if (currentUser$ | async; as user) {
+      <div class="user-section">
+        <div class="user-info">
+          <div class="user-avatar">{{ getInitials(user) }}</div>
+          <div class="user-details">
+            <span class="user-name">{{ user.fullName }}</span>
+            <span class="user-role">{{ user.role }}</span>
+          </div>
+        </div>
+        <button mat-icon-button class="logout-btn" (click)="logout()"
+          matTooltip="Logout" matTooltipPosition="right" aria-label="Logout">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    }
+
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Top bar — live market data strip -->
+    <header class="topbar">
+      <div class="market-status">
+        <!--
+          WHY two status states?
+          Traders must know at a glance if data is live.
+          Green pulsing dot = market open, live prices.
+          Grey dot = market closed, stale data.
+        -->
+        <span class="status-dot"
+          [class.status-dot--open]="marketOpen()"
+          [class.status-dot--closed]="!marketOpen()">
+        </span>
+        <span class="status-text">
+          NSE {{ marketOpen() ? 'Open' : 'Closed' }}
+        </span>
+        <span class="status-separator">•</span>
+        <!--
+          WHY signal + HH:mm:ss?
+          currentTime is an Angular signal updated every second via interval(1000).
+          Showing seconds makes the terminal feel live — traders trust real-time data.
+          The async pipe approach would require an observable; signal() is cleaner here.
+        -->
+        <span class="status-time text-mono">{{ currentTime() | date:'HH:mm:ss' }}</span>
+      </div>
+
+      <div class="topbar-right">
+
+        <span class="index-chip hide-mobile">
+          <span class="chip-label">NIFTY 50</span>
+          <span class="text-mono text-green">22,147 <span class="chip-change">▲ 0.84%</span></span>
+        </span>
+        <span class="index-chip hide-mobile">
+          <span class="chip-label">SENSEX</span>
+          <span class="text-mono text-green">73,088 <span class="chip-change">▲ 0.79%</span></span>
+        </span>
+        <span class="index-chip hide-mobile">
+          <span class="chip-label">NIFTY BANK</span>
+          <span class="text-mono text-red">47,312 <span class="chip-change">▼ 0.22%</span></span>
+        </span>
+
+        <!--
+          Notification bell — shows unread count badge.
+          WHY MatBadge? It overlays a count on the icon without extra markup.
+          notifSvc.unreadCount() is an Angular signal — the badge updates reactively.
+        -->
+        <button
+          mat-icon-button
+          class="notif-bell"
+          (click)="toggleNotifPanel()"
+          [matBadge]="notifSvc.unreadCount() || null"
+          matBadgeColor="warn"
+          matBadgeSize="small"
+          [matBadgeHidden]="notifSvc.unreadCount() === 0"
+          matTooltip="Notifications"
+          aria-label="Notifications">
+          <mat-icon>notifications</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    <!-- Notification panel (slide-in from right) -->
+    @if (notifPanelOpen()) {
+      <app-notification-panel
+        (close)="notifPanelOpen.set(false)">
+      </app-notification-panel>
+    }
+
+    <!-- Feature Page Content -->
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+
+  </main>
+
+  <!-- ── Mobile Bottom Navigation ─────────────────────────────────────────── -->
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    @for (item of navItems; track item.path) {
+      <a
+        class="mnav-item"
+        [routerLink]="item.path"
+        routerLinkActive="mnav-item--active"
+        [routerLinkActiveOptions]="{ exact: false }"
+        [attr.aria-label]="item.label">
+        <mat-icon class="mnav-icon">{{ item.icon }}</mat-icon>
+        <span class="mnav-label">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+</div>

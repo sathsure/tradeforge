@@ -1,0 +1,140 @@
+<!-- Registration page — same visual language as login, extended form -->
+<div class="register-page">
+  <div class="register-card">
+
+    <div class="brand-header">
+      <div class="brand-logo">
+        <span class="logo-icon">TF</span>
+      </div>
+      <h1 class="brand-name">Create Account</h1>
+      <p class="brand-tagline">Join TradeForge — Start trading today</p>
+    </div>
+
+    @if (error$ | async; as error) {
+      @if (error && !error.toLowerCase().includes('already registered')) {
+        <div class="error-alert" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error }}</span>
+        </div>
+      }
+    }
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form" novalidate>
+
+      <!-- Full Name -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Full name</mat-label>
+        <input matInput formControlName="fullName" placeholder="John Doe" autocomplete="name">
+        <mat-icon matPrefix class="field-icon">person_outline</mat-icon>
+        @if (registerForm.get('fullName')?.invalid && registerForm.get('fullName')?.touched) {
+          <mat-error>{{ fullNameError }}</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Email -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Email address</mat-label>
+        <input matInput type="email" formControlName="email" placeholder="you@example.com" autocomplete="email">
+        <mat-icon matPrefix class="field-icon">mail_outline</mat-icon>
+        @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
+          <mat-error>{{ emailError }}</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Phone (optional) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Phone number (optional)</mat-label>
+        <input matInput type="tel" formControlName="phone" placeholder="+91 9876543210" autocomplete="tel">
+        <mat-icon matPrefix class="field-icon">phone</mat-icon>
+        @if (registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched) {
+          <mat-error>{{ phoneError }}</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Password -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          [type]="hidePassword ? 'password' : 'text'"
+          formControlName="password"
+          autocomplete="new-password"
+        >
+        <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
+        <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
+          <mat-error>{{ passwordError }}</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Password Strength Indicator -->
+      @if (passwordStrength) {
+        <div class="strength-bar">
+          <div class="strength-track">
+            <div class="strength-fill" [class]="'strength-' + passwordStrength"></div>
+          </div>
+          <span class="strength-label" [class]="'strength-' + passwordStrength">
+            {{ passwordStrength | titlecase }}
+          </span>
+        </div>
+      }
+
+      <!-- Confirm Password -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Confirm password</mat-label>
+        <input
+          matInput
+          [type]="hideConfirm ? 'password' : 'text'"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+        >
+        <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
+        <button mat-icon-button matSuffix type="button" (click)="hideConfirm = !hideConfirm">
+          <mat-icon>{{ hideConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      @if (registerForm.get('confirmPassword')?.touched && confirmPasswordError) {
+        <div class="password-mismatch-hint">
+          <mat-icon class="mismatch-icon">gpp_bad</mat-icon>
+          <span>{{ confirmPasswordError }}</span>
+        </div>
+      }
+
+      @if (passwordsMatch) {
+        <div class="password-match-hint">
+          <mat-icon class="match-icon">verified</mat-icon>
+          <span>Locked &amp; loaded — passwords match!</span>
+        </div>
+      }
+
+      <!-- Submit -->
+      <button
+        mat-raised-button
+        color="primary"
+        type="submit"
+        class="register-btn"
+        [disabled]="loading$ | async"
+      >
+        @if (loading$ | async) {
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Creating account...</span>
+        } @else {
+          <ng-container>
+            <mat-icon>how_to_reg</mat-icon>
+            <span>Create Account</span>
+          </ng-container>
+        }
+      </button>
+
+    </form>
+
+    <div class="login-footer">
+      <span class="footer-text">Already have an account?</span>
+      <a routerLink="/auth/login" class="login-link">Sign in</a>
+    </div>
+
+  </div>
+</div>

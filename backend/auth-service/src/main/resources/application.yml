@@ -1,0 +1,150 @@
+server:
+  port: 8081
+
+spring:
+  profiles:
+    active: dev
+    # WHY dev profile? Activates DevController (/api/dev/otp/**) for local development.
+    # DevController lets you retrieve OTPs from Redis without reading hidden console logs.
+    # Remove "dev" profile in production — DevController is excluded by @Profile("dev").
+
+  application:
+    name: auth-service   # WHY name matters: Eureka registers under this name.
+                         # API Gateway routes to "auth-service" — must match exactly.
+
+  # ── DATABASE CONFIG ──────────────────────────────────────────────────────
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/tradeforge}
+    # WHY ${DB_URL:default}? Reads from environment variable DB_URL.
+    # Falls back to localhost:5433 for local development (port 5433 = Docker PostgreSQL,
+    # avoiding conflict with local PostgreSQL which runs on port 5432).
+    # In Docker: DB_URL=jdbc:postgresql://postgres:5432/tradeforge (container name)
+    username: ${DB_USER:tradeforge}
+    password: ${DB_PASS:tradeforge123}
+    hikari:
+      maximum-pool-size: 10        # WHY HikariCP? Fastest JDBC connection pool.
+      minimum-idle: 2              # Keep 2 connections open always — faster response
+      connection-timeout: 30000    # 30 seconds before "can't connect" error
+
+  jpa:
+    hibernate:
+      ddl-auto: validate           # WHY validate? Flyway creates tables. Hibernate
+                                   # only validates they match entities. Never use
+                                   # 'create-drop' in production — destroys data!
+    show-sql: true                 # Shows SQL in logs — great for learning
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # ── FLYWAY MIGRATIONS ────────────────────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: auth                  # Flyway manages only the auth schema
+    baseline-on-migrate: true      # WHY? init.sql already created the auth schema.
+                                   # Flyway sees non-empty schema with no history table.
+                                   # baseline-on-migrate: treat current state as V0 baseline,
+                                   # then apply V1__ migrations on top. Safe to use when
+                                   # init.sql pre-created tables match V1 migration.
+    # WHY Flyway? Every schema change is a versioned SQL file in Git.
+    # V1__create_users.sql → V2__add_phone_column.sql → always applied in order.
+
+  # ── MAIL CONFIG ──────────────────────────────────────────────────────────
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: 587
+    username: ${SMTP_USER:satheesh14294@gmail.com}
+    password: ${SMTP_PASS:yrnesafsbczweljw}
+    # ↑ Gmail App Password (16-char, spaces removed). Never commit real creds to Git.
+    #   Go to: Google Account → Security → 2-Step Verification → App Passwords
+    #   Generate a 16-character app password for "Mail"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    # WHY spring.mail config? Enables JavaMailSender bean for SMTP email delivery.
+    # When two-fa.mock-email=false: SmtpEmailService sends real HTML emails via this config.
+    # When two-fa.mock-email=true:  MockEmailService logs OTPs to console (no SMTP used).
+
+  # ── REDIS CONFIG ─────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:tradeforge123}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+
+# ── JWT SETTINGS ─────────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET:tradeforge-super-secret-jwt-key-change-in-production-min-256-bits}
+  access-token-expiry: 900000       # 15 minutes in ms
+  # WHY short expiry? If a token is stolen, it's only valid for 15 min.
+  refresh-token-expiry: 604800000   # 7 days in ms
+  # WHY separate refresh token? After 15min, Angular silently calls /auth/refresh
+  # to get a new access token. User never gets logged out unexpectedly.
+
+# ── TWO-FACTOR AUTHENTICATION CONFIG ─────────────────────────────────────
+two-fa:
+  mock-email: false
+  # WHY false? Real SMTP is configured — OTPs are sent as HTML emails.
+  # To switch back to console logging: set mock-email=true (MockEmailService takes over).
+  # Gmail setup: Google Account → Security → 2-Step Verification → App Passwords → generate 16-char password.
+  mock-sms: true
+  # WHY true? SMS is mocked until Twilio credentials are configured.
+  # When mock-sms=true, MockSmsService (@Primary) logs OTPs to console.
+  rp-id: ${WEBAUTHN_RP_ID:localhost}
+  # WHY rp-id=localhost? WebAuthn relying party ID must match the hostname.
+  # In production: set WEBAUTHN_RP_ID=tradeforge.com.
+  # Changing this breaks all existing WebAuthn credentials (they're bound to the RP ID).
+  rp-name: TradeForge
+
+# ── WEBAUTHN CONFIG ───────────────────────────────────────────────────────
+app:
+  webauthn:
+    rp-id: ${WEBAUTHN_RP_ID:localhost}
+    # WHY duplicate under app.webauthn? WebAuthnService uses @Value("${app.webauthn.rp-id}").
+    # The two-fa.rp-id above is for documentation; app.webauthn.rp-id is the one read by the service.
+    rp-name: TradeForge
+
+# ── EUREKA CLIENT ────────────────────────────────────────────────────────
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true        # WHY? In Docker, container names resolve to IPs.
+                                   # Using IP is more reliable than hostname.
+
+# ── ACTUATOR ─────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics  # Expose only safe endpoints
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mail:
+      enabled: false
+      # WHY disabled? We use MockEmailService in dev — no real SMTP configured.
+      # Spring Mail auto-registers a MailHealthIndicator that tries to connect to SMTP.
+      # Without credentials it fails and marks the whole service DOWN.
+      # Re-enable when real SMTP creds are configured for production.
+
+logging:
+  level:
+    com.tradeforge: DEBUG     # Our code — verbose logging
+    org.springframework.security: DEBUG  # See every security decision
+    org.hibernate.SQL: DEBUG  # See every SQL query (learning mode)
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

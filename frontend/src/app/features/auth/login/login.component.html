@@ -1,0 +1,154 @@
+<!--
+  WHY this layout structure?
+  Full-screen centered card — like Zerodha Kite, Bloomberg, Interactive Brokers login.
+  Dark background (--tf-bg-app) with a slightly lighter card (--tf-bg-surface).
+  Conveys: professional, secure, focused.
+-->
+<div class="login-page">
+
+  <div class="login-card">
+
+    <!-- ── Brand Header ──────────────────────────────────────────────── -->
+    <div class="brand-header">
+      <div class="brand-logo">
+        <span class="logo-icon">TF</span>
+      </div>
+      <h1 class="brand-name">TradeForge</h1>
+      <p class="brand-tagline">Professional Trading Platform</p>
+    </div>
+
+    <!-- ── Error Alert (from NgRx store) ────────────────────────────── -->
+    <!--
+      WHY async pipe?
+      Automatically subscribes and unsubscribes. No memory leaks.
+      Triggers change detection only when value changes (OnPush compatible).
+    -->
+    @if (error$ | async; as error) {
+      <div class="error-alert" role="alert" aria-live="polite">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+    }
+
+    <!-- ── Login Form ────────────────────────────────────────────────── -->
+    <!--
+      WHY (ngSubmit) instead of (click) on button?
+      ngSubmit fires on: button click, Enter key in any field.
+      Keyboard navigation accessibility — traders often use keyboard.
+      (click) on button only fires on click — misses Enter key.
+    -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
+      <!--
+        WHY novalidate?
+        Disables browser's native HTML5 validation UI.
+        We use Angular's reactive form validation for consistent UX.
+        Without novalidate, browser might show its own tooltip-style errors,
+        conflicting with our Material error messages below the field.
+      -->
+
+      <!-- Email Field -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Email address</mat-label>
+        <input
+          matInput
+          type="email"
+          formControlName="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          aria-label="Email address"
+        >
+        <!--
+          WHY autocomplete="email"?
+          Browser fills email from saved passwords. Trading apps need speed.
+          Also: password managers autofill both email + password simultaneously.
+        -->
+        <mat-icon matPrefix class="field-icon">mail_outline</mat-icon>
+        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+          <mat-error>{{ emailError }}</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Password Field -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          [type]="hidePassword ? 'password' : 'text'"
+          formControlName="password"
+          autocomplete="current-password"
+          aria-label="Password"
+        >
+        <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
+        <!--
+          WHY toggle password visibility?
+          Traders frequently use complex passwords. Being able to verify they typed
+          correctly reduces login failures. Standard UX pattern (used by Gmail, GitHub).
+        -->
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="hidePassword = !hidePassword"
+          [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'"
+        >
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <mat-error>{{ passwordError }}</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Submit Button -->
+      <!--
+        WHY [disabled]="loading$ | async"?
+        Prevents double-submission. User clicks Login → HTTP call starts →
+        button disabled → HTTP call completes → button re-enabled.
+        Without this, impatient traders might click 3x and create 3 sessions.
+      -->
+      <button
+        mat-raised-button
+        color="primary"
+        type="submit"
+        class="login-btn"
+        [disabled]="loading$ | async"
+        aria-label="Sign in to TradeForge"
+      >
+        @if (loading$ | async) {
+          <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
+          <span>Signing in...</span>
+        } @else {
+          <!--
+            WHY ng-container here?
+            Angular Material's MatButton uses content projection slots for mat-icon.
+            When an @else block has multiple root nodes, Angular can't determine which
+            slot each node belongs to → NG8011 warning and icon may not render correctly.
+            ng-container is a virtual wrapper — it groups nodes without adding a DOM element.
+            This satisfies Material's content projection requirements.
+          -->
+          <ng-container>
+            <mat-icon>login</mat-icon>
+            <span>Sign In</span>
+          </ng-container>
+        }
+      </button>
+
+    </form>
+
+    <!-- ── Footer Links ──────────────────────────────────────────────── -->
+    <div class="login-footer">
+      <span class="footer-text">New to TradeForge?</span>
+      <a routerLink="/auth/register" class="register-link">
+        Create account
+      </a>
+    </div>
+
+  </div><!-- /login-card -->
+
+  <!-- Background decoration — subtle market chart feel -->
+  <div class="bg-decoration" aria-hidden="true">
+    <div class="bg-line"></div>
+    <div class="bg-line"></div>
+    <div class="bg-line"></div>
+  </div>
+
+</div><!-- /login-page -->

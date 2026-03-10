@@ -1,0 +1,127 @@
+<!--
+  Two-Factor Verify Page.
+  Same card layout as login.component.html — consistent auth flow UX.
+  Shows different content based on twoFactorMethod (EMAIL/SMS → OTP boxes, WEBAUTHN → biometric button).
+-->
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- ── Brand Header ──────────────────────────────────────────────── -->
+    <div class="brand-header">
+      <div class="brand-logo"><span class="logo-icon">TF</span></div>
+      <h1 class="brand-name">TradeForge</h1>
+      <p class="brand-tagline">Two-Factor Authentication</p>
+    </div>
+
+    <!-- ── Error Alert ──────────────────────────────────────────────── -->
+    @if (error$ | async; as error) {
+      <div class="error-alert" role="alert" aria-live="polite">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+    }
+
+    <!-- ── Method-specific UI ───────────────────────────────────────── -->
+    @if (method$ | async; as method) {
+
+      <!-- Method description row -->
+      <div class="method-info">
+        @switch (method) {
+          @case ('EMAIL') {
+            <mat-icon class="method-icon">mail_outline</mat-icon>
+            <p>A 6-digit code was sent to your registered email address.</p>
+          }
+          @case ('SMS') {
+            <mat-icon class="method-icon">sms</mat-icon>
+            <p>A 6-digit code was sent to your registered phone number.</p>
+          }
+          @case ('WEBAUTHN') {
+            <mat-icon class="method-icon">fingerprint</mat-icon>
+            <p>Use your device biometric or security key to verify your identity.</p>
+          }
+        }
+      </div>
+
+      <!-- ── WebAuthn path ─────────────────────────────────────────── -->
+      @if (method === 'WEBAUTHN') {
+        <div class="webauthn-section">
+          <button mat-raised-button color="primary" class="webauthn-btn"
+                  (click)="onWebAuthn()" [disabled]="loading$ | async">
+            @if (loading$ | async) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <ng-container>
+                <mat-icon>fingerprint</mat-icon>
+                <span>Verify with Biometric</span>
+              </ng-container>
+            }
+          </button>
+        </div>
+      } @else {
+        <!-- ── OTP path ──────────────────────────────────────────── -->
+
+        <!-- Six individual digit boxes with auto-advance and paste support -->
+        <div class="otp-boxes" (paste)="onPaste($event)">
+          @for (digit of digits; track $index) {
+            <input
+              #digitInput
+              class="otp-box"
+              type="text"
+              inputmode="numeric"
+              maxlength="1"
+              [value]="digit"
+              (input)="onDigitInput($event, $index)"
+              (keydown)="onKeydown($event, $index)"
+              autocomplete="one-time-code"
+              [attr.aria-label]="'Digit ' + ($index + 1) + ' of 6'"
+            />
+          }
+        </div>
+
+        <!-- Trust device checkbox -->
+        <div class="trust-row">
+          <mat-checkbox [(ngModel)]="trustDevice" color="primary">
+            Trust this device for 30 days
+          </mat-checkbox>
+        </div>
+
+        <!-- Verify button -->
+        <button mat-raised-button color="primary" class="verify-btn"
+                (click)="onVerifyOtp()"
+                [disabled]="(loading$ | async) || otp.length !== 6">
+          @if (loading$ | async) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Verifying...</span>
+          } @else {
+            <ng-container>
+              <mat-icon>verified_user</mat-icon>
+              <span>Verify Code</span>
+            </ng-container>
+          }
+        </button>
+
+        <!-- Resend with cooldown -->
+        <button mat-button class="resend-btn"
+                (click)="resendOtp()" [disabled]="resendCooldown > 0">
+          {{ resendCooldown > 0 ? 'Resend in ' + resendCooldown + 's' : 'Resend code' }}
+        </button>
+      }
+
+      <!-- Back to login -->
+      <button mat-button class="back-btn" (click)="onCancel()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back to login</span>
+      </button>
+
+    }
+
+  </div><!-- /login-card -->
+
+  <!-- Background decoration — matches login page visual style -->
+  <div class="bg-decoration" aria-hidden="true">
+    <div class="bg-line"></div>
+    <div class="bg-line"></div>
+    <div class="bg-line"></div>
+  </div>
+
+</div><!-- /login-page -->

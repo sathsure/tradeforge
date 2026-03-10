@@ -1,0 +1,88 @@
+<!--
+  404 page — minimal, guides user back to a working page.
+  WHY no router-outlet or shell here?
+  404 can be hit when unauthenticated (user types a random URL).
+  The shell requires authentication. Show a standalone 404 instead.
+-->
+<div class="not-found-page">
+  <div class="not-found-card">
+
+    <div class="error-code">404</div>
+
+    <div class="chart-icon">
+      <!-- Simple ASCII-style down chart — "page not found" trading pun -->
+      <mat-icon style="font-size: 64px; width: 64px; height: 64px; color: var(--tf-red);">
+        trending_down
+      </mat-icon>
+    </div>
+
+    <h1 class="error-title">Page Not Found</h1>
+    <p class="error-desc">
+      The page you're looking for doesn't exist.<br>
+      It may have been moved, or the URL might be wrong.
+    </p>
+
+    <div class="actions">
+      <a mat-raised-button color="primary" routerLink="/dashboard">
+        <mat-icon>home</mat-icon>
+        Go to Dashboard
+      </a>
+      <a mat-stroked-button routerLink="/auth/login">
+        <mat-icon>login</mat-icon>
+        Sign In
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .not-found-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--tf-bg-app);
+    padding: 24px;
+  }
+
+  .not-found-card {
+    text-align: center;
+    max-width: 480px;
+  }
+
+  .error-code {
+    font-size: 96px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--tf-border-muted);
+    line-height: 1;
+    margin-bottom: 8px;
+    letter-spacing: -4px;
+  }
+
+  .chart-icon {
+    margin: 16px 0;
+  }
+
+  .error-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--tf-text-primary);
+    margin: 0 0 12px;
+  }
+
+  .error-desc {
+    font-size: 14px;
+    color: var(--tf-text-secondary);
+    line-height: 1.6;
+    margin: 0 0 32px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+</style>

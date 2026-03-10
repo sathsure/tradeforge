@@ -1,0 +1,539 @@
+// ============================================================
+// WHY this file?
+// Global styles shared across the ENTIRE app.
+// Anything component-specific goes in component.scss.
+// Angular Material theming MUST be in global styles — it generates
+// CSS custom properties that cascade to all component shadow DOMs.
+// ============================================================
+
+// ── Angular Material M3 Theming ──────────────────────────────────────────────
+// WHY @use instead of @import?
+// @use is the modern Sass module system. Namespaced — no global pollution.
+// @import is deprecated. @use forces explicit namespacing (mat.$cyan-palette).
+@use '@angular/material' as mat;
+
+// WHY mat.core()?
+// Emits Angular Material's global foundation styles:
+// - Ripple animations (the click wave effect)
+// - Overlay container styles (dialogs, tooltips)
+// - Focus indicator styles (accessibility)
+// Without this, Material components look broken or missing styles.
+@include mat.core();
+
+// Define our dark theme using Material 3 API
+// WHY dark theme for a trading platform?
+// Traders stare at screens for 8+ hours. Dark themes reduce eye strain.
+// Also: green/red price changes pop much better on dark backgrounds.
+// Reference: Bloomberg Terminal, Kite, TradingView all use dark themes.
+$dark-theme: mat.define-theme((
+  color: (
+    theme-type: dark,
+    // Cyan: TradeForge brand color — professional, financial, trustworthy
+    primary: mat.$cyan-palette,
+    // Green: gains, positive P&L — psychologically important
+    tertiary: mat.$green-palette,
+  ),
+  typography: (
+    // Inter: designed for screens, excellent at small sizes (11-14px)
+    // Critical for trading UIs with dense data tables
+    plain-family: 'Inter, sans-serif',
+    brand-family: 'Inter, sans-serif',
+    // WHY only brand-family and plain-family?
+    // Angular Material 18 typography config only supports:
+    // brand-family, plain-family, bold-weight, medium-weight, regular-weight
+    // Monospace font for prices is applied via .text-mono utility class in CSS.
+  ),
+  density: (scale: 0),
+));
+
+// ── Angular Material Light Theme ──────────────────────────────────────────────
+// WHY a separate light theme?
+// Angular Material M3 theming is compile-time. To switch between dark and light
+// Material components, we define both themes and activate one via a CSS selector.
+// ThemeService sets document.documentElement.setAttribute('data-theme', 'light')
+// which activates [data-theme="light"] selector below.
+$light-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$cyan-palette,
+    tertiary: mat.$green-palette,
+  ),
+  typography: (
+    plain-family: 'Inter, sans-serif',
+    brand-family: 'Inter, sans-serif',
+  ),
+  density: (scale: 0),
+));
+
+// WHY :root and html?
+// :root gives highest specificity for CSS custom properties.
+// html is needed for Angular Material's theme application.
+// The theme generates CSS custom properties (--mdc-*) that all components use.
+html {
+  @include mat.all-component-themes($dark-theme);
+}
+
+// Activate Material light theme when data-theme="light" is on <html>
+// WHY on html (not :root)? mat.all-component-colors needs an element, not :root.
+html[data-theme="light"] {
+  @include mat.all-component-colors($light-theme);
+}
+
+// ── TradeForge Design System Variables ──────────────────────────────────────
+// WHY CSS custom properties (variables) and not SCSS variables?
+// CSS custom properties are RUNTIME — can be changed with JavaScript.
+// SCSS variables are compile-time — cannot change for themes/modes.
+// CSS vars also cascade into component shadow DOMs.
+:root {
+  // Background layers (darkest to lightest)
+  --tf-bg-app: #0d1117;        // Outermost app background (like GitHub dark)
+  --tf-bg-sidebar: #010409;    // Sidebar — slightly darker than main
+  --tf-bg-surface: #161b22;    // Cards, panels
+  --tf-bg-elevated: #1c2128;   // Dialogs, dropdowns, tooltips
+  --tf-bg-input: #0d1117;      // Form inputs
+
+  // Borders
+  --tf-border-subtle: #21262d;
+  --tf-border: #30363d;
+  --tf-border-muted: #484f58;
+
+  // Text
+  --tf-text-primary: #e6edf3;   // Main text — bright but not pure white
+  --tf-text-secondary: #8b949e; // Labels, subtitles
+  --tf-text-muted: #6e7681;     // Disabled, placeholder
+  --tf-text-link: #58a6ff;      // Links, interactive
+
+  // Trading-specific semantic colors
+  // WHY these specific hex values?
+  // #3fb950: matches GitHub's green, very visible on dark bg
+  // #f85149: matches GitHub's red, high contrast for loss indication
+  // These are industry-standard colors traders instantly recognize
+  --tf-green: #3fb950;          // GAIN — price up, profitable position
+  --tf-green-bg: rgba(63, 185, 80, 0.1);
+  --tf-red: #f85149;            // LOSS — price down, losing position
+  --tf-red-bg: rgba(248, 81, 73, 0.1);
+  --tf-yellow: #d29922;         // WARNING, pending orders
+  --tf-blue: #58a6ff;           // INFO, links
+  --tf-cyan: #39d0d8;           // Brand accent
+
+  // Spacing scale
+  --tf-space-xs: 4px;
+  --tf-space-sm: 8px;
+  --tf-space-md: 16px;
+  --tf-space-lg: 24px;
+  --tf-space-xl: 32px;
+
+  // Border radius
+  --tf-radius-sm: 4px;
+  --tf-radius-md: 8px;
+  --tf-radius-lg: 12px;
+
+  // Sidebar dimensions
+  --tf-sidebar-width: 220px;
+  --tf-topbar-height: 56px;
+
+  // Shadows (subtle on dark backgrounds)
+  --tf-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --tf-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --tf-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+// ── Light Theme CSS Variables ─────────────────────────────────────────────────
+// WHY [data-theme="light"] and not a class?
+// ThemeService sets/removes an attribute on <html>. Attribute selector gives
+// high specificity that overrides :root defaults without !important.
+// Using a data attribute is semantic — "this element has light theme data".
+[data-theme="light"] {
+  // Backgrounds (light surfaces)
+  --tf-bg-app:      #f6f8fa;  // GitHub light background
+  --tf-bg-sidebar:  #ffffff;
+  --tf-bg-surface:  #ffffff;
+  --tf-bg-elevated: #f0f2f5;
+  --tf-bg-input:    #ffffff;
+
+  // Borders
+  --tf-border-subtle: #eaeef2;
+  --tf-border:        #d0d7de;
+  --tf-border-muted:  #bfc8d0;
+
+  // Text
+  --tf-text-primary:   #1f2328;  // Near-black — comfortable on white
+  --tf-text-secondary: #636c76;
+  --tf-text-muted:     #9198a1;
+  --tf-text-link:      #0969da;
+
+  // Trading colours — slightly darker for legibility on white
+  --tf-green:    #1a7f37;
+  --tf-green-bg: rgba(26, 127, 55, 0.08);
+  --tf-red:      #d1242f;
+  --tf-red-bg:   rgba(209, 36, 47, 0.08);
+  --tf-yellow:   #9a6700;
+  --tf-blue:     #0969da;
+  --tf-cyan:     #0969da;  // Blue replaces cyan on light — better contrast
+
+  // Shadows (lighter on white backgrounds)
+  --tf-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --tf-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --tf-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+// ── Global Base Styles ───────────────────────────────────────────────────────
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  // WHY border-box? Width includes padding and border.
+  // Without this, adding padding increases element size — layout surprises.
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--tf-bg-app);
+  color: var(--tf-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  // WHY -webkit-font-smoothing: antialiased?
+  // macOS renders fonts with subpixel antialiasing by default (darker, heavier).
+  // antialiased gives thinner, crisper text — preferred on dark backgrounds.
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ── Scrollbar Styling ─────────────────────────────────────────────────────────
+// WHY custom scrollbar? Default browser scrollbars look jarring on dark UIs.
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--tf-bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tf-border-muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tf-text-muted);
+}
+
+// ── Angular Material Overrides ────────────────────────────────────────────────
+// WHY override Material? Default Material colors don't match our design system.
+// We keep Material's interaction patterns (ripple, focus) but change visual style.
+
+// Form fields — dark input style
+.mat-mdc-form-field {
+  width: 100%;
+
+  .mat-mdc-text-field-wrapper {
+    background-color: var(--tf-bg-input) !important;
+    border-radius: var(--tf-radius-sm) !important;
+  }
+
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border-color: var(--tf-border) !important;
+  }
+
+  &:hover .mdc-notched-outline__leading,
+  &:hover .mdc-notched-outline__notch,
+  &:hover .mdc-notched-outline__trailing {
+    border-color: var(--tf-border-muted) !important;
+  }
+
+  .mat-mdc-input-element {
+    color: var(--tf-text-primary) !important;
+    caret-color: var(--tf-cyan) !important;
+  }
+
+  .mat-mdc-floating-label {
+    color: var(--tf-text-secondary) !important;
+  }
+}
+
+// Buttons
+.mat-mdc-raised-button.mat-primary {
+  background-color: var(--tf-cyan) !important;
+  color: #000 !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+}
+
+// Cards
+.mat-mdc-card {
+  background-color: var(--tf-bg-surface) !important;
+  border: 1px solid var(--tf-border) !important;
+  box-shadow: var(--tf-shadow-sm) !important;
+}
+
+// ── Utility Classes ───────────────────────────────────────────────────────────
+// WHY utility classes? For one-off overrides without creating component styles.
+// These are purposely minimal — use sparingly, not as a utility-first framework.
+
+.text-green { color: var(--tf-green) !important; }
+.text-red   { color: var(--tf-red) !important; }
+.text-muted { color: var(--tf-text-secondary) !important; }
+.text-mono  { font-family: 'JetBrains Mono', monospace !important; }
+
+.bg-green { background-color: var(--tf-green-bg) !important; }
+.bg-red   { background-color: var(--tf-red-bg) !important; }
+
+.badge-up {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--tf-green);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.badge-down {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--tf-red);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+// Full-height flex container for router-outlet pages
+.page-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tf-space-md);
+  padding: var(--tf-space-lg);
+  overflow-y: auto;
+}
+
+// ── Responsive Utilities ──────────────────────────────────────────────────────
+.hide-mobile  { @media (max-width: 768px)  { display: none !important; } }
+.hide-tablet  { @media (max-width: 1024px) { display: none !important; } }
+.hide-desktop { @media (min-width: 769px)  { display: none !important; } }
+
+// Tables: horizontal scroll container on small screens so columns never crush
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar { height: 4px; }
+  &::-webkit-scrollbar-thumb { background: var(--tf-border); border-radius: 2px; }
+}
+
+// Reduce page padding on mobile to maximise usable area
+@media (max-width: 768px) {
+  .page-container { padding: var(--tf-space-md); gap: var(--tf-space-sm); }
+
+  // Feature pages that use inline padding: 24px
+  // These selectors match common patterns across all feature components
+  [class*="-page"]    { padding: 14px !important; }
+  [class*="alerts-page"],
+  [class*="screener-page"],
+  [class*="orders-page"],
+  [class*="portfolio-page"] { padding: 14px !important; }
+
+  // Grids: single column on very small screens
+  .stats-grid,
+  .indices-grid,
+  .quick-grid,
+  .alert-grid,
+  .fundamentals-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  // Mat tables: wrap in scrollable container automatically
+  .mat-mdc-table {
+    min-width: 600px; // prevent column crush
+  }
+  mat-table, .mat-table-wrap {
+    overflow-x: auto;
+    display: block;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  html { font-size: 13px; } // slightly smaller base on phones
+}
+
+// ── Snackbar Styles ───────────────────────────────────────────────────────────
+// WHY global snackbar styles?
+// Material snackbar panels are rendered in an overlay outside the component tree.
+// Component-scoped SCSS cannot reach them — must be global.
+.snack-info {
+  .mdc-snackbar__surface {
+    background: var(--tf-bg-elevated) !important;
+    border: 1px solid var(--tf-border) !important;
+    color: var(--tf-text-primary) !important;
+  }
+}
+
+.snack-warn {
+  .mdc-snackbar__surface {
+    background: rgba(210, 153, 34, 0.15) !important;
+    border: 1px solid var(--tf-yellow) !important;
+    color: var(--tf-yellow) !important;
+  }
+}
+
+// WHY tf-snack-add / tf-snack-remove?
+// TradeForge-branded watchlist snackbars — rendered in the global overlay so
+// they need to be styled here (not in the component's scoped CSS).
+.tf-snack {
+  .mdc-snackbar__surface {
+    border-radius: 10px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    padding: 0 !important;
+    min-width: 280px !important;
+  }
+  .mat-mdc-snack-bar-label {
+    padding: 14px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important;
+    letter-spacing: 0.01em !important;
+  }
+  .mat-mdc-snack-bar-action {
+    padding-right: 12px !important;
+  }
+  .mat-mdc-button.mat-mdc-snack-bar-action {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    min-width: 48px !important;
+  }
+}
+
+.tf-snack-add {
+  .mdc-snackbar__surface {
+    background: linear-gradient(135deg,
+      rgba(22, 27, 34, 0.97) 0%,
+      rgba(28, 38, 28, 0.97) 100%) !important;
+    border: 1px solid rgba(63, 185, 80, 0.45) !important;
+    border-left: 3px solid #3fb950 !important;
+  }
+  .mat-mdc-snack-bar-label {
+    color: #e6edf3 !important;
+  }
+  .mat-mdc-button.mat-mdc-snack-bar-action {
+    color: #3fb950 !important;
+    background: rgba(63, 185, 80, 0.12) !important;
+  }
+}
+
+.tf-snack-remove {
+  .mdc-snackbar__surface {
+    background: linear-gradient(135deg,
+      rgba(22, 27, 34, 0.97) 0%,
+      rgba(38, 22, 22, 0.97) 100%) !important;
+    border: 1px solid rgba(248, 81, 73, 0.35) !important;
+    border-left: 3px solid #f85149 !important;
+  }
+  .mat-mdc-snack-bar-label {
+    color: #e6edf3 !important;
+  }
+  .mat-mdc-button.mat-mdc-snack-bar-action {
+    color: #f85149 !important;
+    background: rgba(248, 81, 73, 0.10) !important;
+  }
+}
+
+// ── Slide Toggle Theme Adaptation ────────────────────────────────────────────
+// WHY? mat-slide-toggle uses --mdc-switch-* variables.
+// In light theme, the track background needs adjusting.
+[data-theme="light"] {
+  .mat-mdc-slide-toggle .mdc-switch__track {
+    background-color: var(--tf-border) !important;
+  }
+
+  // Cards in light mode
+  .mat-mdc-card {
+    background-color: var(--tf-bg-surface) !important;
+    border: 1px solid var(--tf-border) !important;
+    box-shadow: var(--tf-shadow-sm) !important;
+  }
+
+  // Form fields in light mode
+  .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+      background-color: var(--tf-bg-input) !important;
+    }
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: var(--tf-border) !important;
+    }
+  }
+}
+
+// ── Global Toast Panel ────────────────────────────────────────────────────────
+// Strips all default MatSnackBar chrome — our ToastComponent owns the full UI.
+.tf-toast-panel {
+  // Remove default snackbar padding/background so our component is frameless
+  &.mat-mdc-snack-bar-container {
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    min-width: 0 !important;
+    max-width: 440px !important;
+  }
+
+  .mdc-snackbar__surface {
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    min-width: 0 !important;
+  }
+
+  .mdc-snackbar__label {
+    padding: 0 !important;
+  }
+}
+
+// ── Toast slide-in animation ──────────────────────────────────────────────────
+.mat-mdc-snack-bar-container.tf-toast-panel {
+  animation: toastSlideIn 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+// ── Mobile: slide down from top, full width ────────────────────────────────────
+@media (max-width: 599px) {
+  .mat-mdc-snack-bar-container.tf-toast-panel {
+    animation: toastSlideDown 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+    margin: 8px 12px 0 !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .tf-toast-panel {
+    &.mat-mdc-snack-bar-container {
+      max-width: calc(100vw - 24px) !important;
+    }
+
+    tf-toast .toast-wrapper {
+      min-width: unset !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+  }
+
+  @keyframes toastSlideDown {
+    from { opacity: 0; transform: translateY(-110%); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}

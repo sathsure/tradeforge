@@ -1,0 +1,156 @@
+server:
+  port: 8080
+  # WHY 8080? Industry convention for API Gateway / reverse proxy.
+  # Angular points to http://localhost:8080 — the only URL it knows.
+  # All internal service ports (8081, 8083, 8084, 8085) are hidden from Angular.
+
+spring:
+  application:
+    name: api-gateway
+    # WHY this name? Registers as "api-gateway" in Eureka.
+    # Ops team sees: api-gateway (8080), auth-service (8081), market-service (8083)
+
+  # ── REDIS CONFIG ─────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:tradeforge123}
+      # WHY Redis in Gateway? Used for rate limiting (RequestRateLimiter filter).
+      # Redis tracks request counts per client IP across restarts.
+
+  # ── Spring Cloud Gateway Configuration ─────────────────────────────────────
+  cloud:
+    gateway:
+      routes:
+
+        # ── Auth Service Route ─────────────────────────────────────────────
+        - id: auth-service
+          uri: lb://auth-service
+          # WHY lb://auth-service?
+          # lb = load balancer. Spring Cloud LoadBalancer queries Eureka for instances.
+          # "auth-service" must match spring.application.name in auth-service's application.yml.
+          # If auth-service runs on 3 instances, requests are round-robin balanced.
+          predicates:
+            - Path=/api/auth/**
+          # WHY Path predicate? Only routes requests with this path prefix to auth-service.
+          # GET /api/auth/login → auth-service
+          # GET /api/markets/... → not matched here, continues to next route
+          filters:
+            - RewritePath=/api/auth/(?<segment>.*), /api/auth/${segment}
+            # WHY RewritePath? Preserves the full path.
+            # Without this, /api/auth/login would hit auth-service as /api/auth/login — correct.
+            # StripPrefix=1 would strip /api → auth-service receives /auth/login — wrong!
+            # RewritePath captures and re-constructs the path unchanged.
+
+        # ── Auth 2FA Route ─────────────────────────────────────────────────
+        # WHY a separate route for /api/auth/2fa/**?
+        # The existing auth-service route matches /api/auth/** which covers /api/auth/2fa/** too.
+        # However, defining it explicitly allows future rate-limiting (e.g., stricter rate limit
+        # on OTP verification endpoints) without affecting /api/auth/login or /api/auth/register.
+        # Both routes point to the same auth-service — no behavior change today.
+        - id: auth-2fa-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/2fa/**
+          filters:
+            - RewritePath=/api/auth/2fa/(?<segment>.*), /api/auth/2fa/${segment}
+
+        # ── Market Service Route ───────────────────────────────────────────
+        - id: market-service
+          uri: lb://market-service
+          predicates:
+            - Path=/api/markets/**
+          filters:
+            - RewritePath=/api/markets/(?<segment>.*), /api/markets/${segment}
+
+        # ── Order Service Route ────────────────────────────────────────────
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - RewritePath=/api/orders/(?<segment>.*), /api/orders/${segment}
+
+        # ── Portfolio Service Route ────────────────────────────────────────
+        - id: portfolio-service
+          uri: lb://portfolio-service
+          predicates:
+            - Path=/api/portfolio/**
+          filters:
+            - RewritePath=/api/portfolio/(?<segment>.*), /api/portfolio/${segment}
+
+        # ── Screener Route (via market-service) ────────────────────────────
+        # WHY separate route? /api/screener/** is a distinct logical feature
+        # (Stock Screener + MF Screener pages). Keeping a separate route makes
+        # it easy to move to its own service later without changing the frontend.
+        - id: screener-service
+          uri: lb://market-service
+          predicates:
+            - Path=/api/screener/**
+          filters:
+            - RewritePath=/api/screener/(?<segment>.*), /api/screener/${segment}
+
+        # ── Price Alerts Route (via market-service) ────────────────────────
+        # WHY separate route for alerts? /api/alerts/** is user-specific and
+        # requires JWT extraction. Separate prefix isolates it from the public
+        # market data routes and makes auth middleware addition straightforward.
+        - id: alerts-service
+          uri: lb://market-service
+          predicates:
+            - Path=/api/alerts/**
+          filters:
+            - RewritePath=/api/alerts/(?<segment>.*), /api/alerts/${segment}
+
+      # CORS is handled by CorsWebFilter bean in CorsConfig.java (NOT here).
+      # WHY not YAML globalcors? Having BOTH the bean AND YAML causes duplicate
+      # Access-Control-Allow-Origin headers → browser blocks the request.
+      # The CorsWebFilter bean is sufficient for all CORS handling.
+
+# ── Eureka Client ─────────────────────────────────────────────────────────────
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+      # WHY environment variable with default?
+      # Docker: EUREKA_URI=http://eureka-server:8761/eureka (container name)
+      # Local development: falls back to http://localhost:8761/eureka
+    register-with-eureka: true
+    # WHY register? Even the Gateway registers itself.
+    # Allows monitoring tools to discover all services including the gateway.
+    fetch-registry: true
+    # WHY fetch? Gateway needs to know about auth-service, market-service instances.
+    # Without fetching the registry, lb://auth-service can't resolve to an IP.
+  instance:
+    prefer-ip-address: true
+    # WHY prefer IP? In Docker, container hostnames can be unreliable.
+    # IP address is always resolvable within the Docker network.
+
+# ── Actuator ─────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+        # WHY include 'gateway'? Exposes /actuator/gateway/routes — shows all routes.
+        # Invaluable for debugging routing issues:
+        # curl http://localhost:8080/actuator/gateway/routes | jq
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+      # WHY enable gateway endpoint? Allows runtime inspection and route refresh.
+      # POST /actuator/gateway/refresh — reloads routes without restart.
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    # WHY DEBUG for gateway? Shows every routing decision:
+    # "Route auth-service matched, forwarding to http://172.20.0.3:8081/api/auth/login"
+    # Essential for diagnosing "why isn't my request routing to the right service?"
+    reactor.netty: INFO
+    # WHY INFO for Netty? DEBUG is extremely verbose (hex dumps of every byte).
+    # INFO shows connection lifecycle without overwhelming the log.
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

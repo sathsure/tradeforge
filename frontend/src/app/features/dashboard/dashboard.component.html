@@ -1,0 +1,427 @@
+<!-- Dashboard — Trading Command Center -->
+<div class="dashboard">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="dashboard-header">
+    <div class="greeting">
+      @if (currentUser$ | async; as user) {
+        <h2 class="greeting-text">Good morning, {{ user.fullName.split(' ')[0] }}</h2>
+      } @else {
+        <h2 class="greeting-text">Dashboard</h2>
+      }
+      <p class="greeting-date">{{ today | date:'fullDate' }}</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/screener" mat-stroked-button class="action-btn">
+        <mat-icon>manage_search</mat-icon> Explore Stocks
+      </a>
+      <a routerLink="/mutual-funds" mat-stroked-button class="action-btn">
+        <mat-icon>account_balance</mat-icon> Explore MF
+      </a>
+      <a routerLink="/place-order" mat-flat-button class="primary-btn">
+        <mat-icon>add_shopping_cart</mat-icon> New Order
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Loading bar ─────────────────────────────────────────────────────── -->
+  @if (loading$ | async) {
+    <mat-progress-bar mode="indeterminate" class="load-bar"></mat-progress-bar>
+  }
+
+  <!-- ── Market Indices Strip ────────────────────────────────────────────── -->
+  <div class="indices-strip">
+    @for (idx of indices(); track idx.symbol) {
+      <div class="idx-item" [class.idx-up]="idx.change >= 0" [class.idx-dn]="idx.change < 0">
+        <span class="idx-dot"></span>
+        <span class="idx-name">{{ idx.name }}</span>
+        <span class="idx-val">{{ idx.value | number:'1.2-2' }}</span>
+        <span class="idx-chg">
+          {{ idx.change >= 0 ? '+' : '' }}{{ idx.changePct | number:'1.2-2' }}%
+        </span>
+      </div>
+    }
+  </div>
+
+  <!-- ── Combined Portfolio Banner (Stocks + MF) ─────────────────────────── -->
+  <div class="portfolio-banner">
+    <div class="pb-identity">
+      <mat-icon class="pb-icon">donut_large</mat-icon>
+      <div>
+        <div class="pb-title">Total Portfolio</div>
+        <div class="pb-sub">Stocks &amp; Mutual Funds</div>
+      </div>
+    </div>
+
+    <div class="pb-stats">
+      <div class="pb-stat">
+        <span class="pb-s-label">Invested</span>
+        <span class="pb-s-val text-mono">₹{{ portfInvested() | number:'1.0-0' }}</span>
+      </div>
+      <div class="pb-stat">
+        <span class="pb-s-label">Current Value</span>
+        <span class="pb-s-val text-mono" [style.color]="getPnlColor(portfPnl())">
+          ₹{{ portfCurrent() | number:'1.0-0' }}
+        </span>
+      </div>
+      <div class="pb-stat">
+        <span class="pb-s-label">Overall P&amp;L</span>
+        <div class="pb-pnl-row">
+          <span class="pb-s-val text-mono" [style.color]="getPnlColor(portfPnl())">
+            {{ portfPnl() >= 0 ? '+' : '' }}₹{{ portfPnl() | number:'1.0-0' }}
+          </span>
+          <span class="pb-s-pct"
+                [class.text-green]="portfPnl() >= 0"
+                [class.text-red]="portfPnl() < 0">
+            {{ portfPnlPct() >= 0 ? '+' : '' }}{{ portfPnlPct() | number:'1.2-2' }}%
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <a routerLink="/portfolio" class="pb-cta">
+      <mat-icon class="pb-cta-icon">pie_chart</mat-icon>
+      <span>View Full Portfolio</span>
+      <mat-icon class="pb-cta-arrow">arrow_forward</mat-icon>
+    </a>
+  </div>
+
+  <!-- ── Main Content Grid ───────────────────────────────────────────────── -->
+  <div class="content-grid">
+
+    <!-- Left column -->
+    <div class="holdings-column">
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn" [class.active]="activeTab() === 'stocks'" (click)="setTab('stocks')">
+          <mat-icon>show_chart</mat-icon> Stocks
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'mf'" (click)="setTab('mf')">
+          <mat-icon>account_balance</mat-icon> Mutual Funds
+        </button>
+        <div class="tab-slider" [class.slide-right]="activeTab() === 'mf'"></div>
+      </div>
+
+      <!-- ── 6-Metric Strip (switches with tab) ──────────────────────────── -->
+      <div class="metrics-strip"
+           [class.metrics-stocks]="activeTab() === 'stocks'"
+           [class.metrics-mf]="activeTab() === 'mf'">
+
+        <div class="ms-card">
+          <span class="ms-label">Invested</span>
+          <span class="ms-val text-mono">₹{{ tabMetrics().invested | number:'1.0-0' }}</span>
+        </div>
+
+        <div class="ms-card"
+             [class.ms-profit]="tabMetrics().totalPnl > 0"
+             [class.ms-loss]="tabMetrics().totalPnl < 0">
+          <span class="ms-label">Current Value</span>
+          <span class="ms-val text-mono" [style.color]="getPnlColor(tabMetrics().totalPnl)">
+            ₹{{ tabMetrics().currentVal | number:'1.0-0' }}
+          </span>
+        </div>
+
+        <div class="ms-card"
+             [class.ms-profit]="tabMetrics().totalPnl > 0"
+             [class.ms-loss]="tabMetrics().totalPnl < 0">
+          <span class="ms-label">Total P&amp;L</span>
+          <span class="ms-val text-mono" [style.color]="getPnlColor(tabMetrics().totalPnl)">
+            {{ tabMetrics().totalPnl >= 0 ? '+' : '' }}₹{{ tabMetrics().totalPnl | number:'1.0-0' }}
+          </span>
+          <span class="ms-sub"
+                [class.text-green]="tabMetrics().totalPnl >= 0"
+                [class.text-red]="tabMetrics().totalPnl < 0">
+            {{ tabMetrics().totalPnlPct >= 0 ? '+' : '' }}{{ tabMetrics().totalPnlPct | number:'1.1-1' }}%
+          </span>
+        </div>
+
+        <div class="ms-card"
+             [class.ms-profit]="tabMetrics().dayPnl > 0"
+             [class.ms-loss]="tabMetrics().dayPnl < 0">
+          <span class="ms-label">Today's P&amp;L</span>
+          <span class="ms-val text-mono" [style.color]="getPnlColor(tabMetrics().dayPnl)">
+            {{ tabMetrics().dayPnl >= 0 ? '+' : '' }}₹{{ tabMetrics().dayPnl | number:'1.0-0' }}
+          </span>
+          <span class="ms-sub"
+                [class.text-green]="tabMetrics().dayPnl >= 0"
+                [class.text-red]="tabMetrics().dayPnl < 0">
+            {{ tabMetrics().dayPnlPct >= 0 ? '+' : '' }}{{ tabMetrics().dayPnlPct | number:'1.2-2' }}%
+          </span>
+        </div>
+
+        <div class="ms-card ms-rate">
+          <span class="ms-label">XIRR</span>
+          <span class="ms-val text-mono text-green">{{ tabMetrics().xirr | number:'1.1-1' }}%</span>
+        </div>
+
+        <div class="ms-card ms-rate">
+          <span class="ms-label">CAGR</span>
+          <span class="ms-val text-mono text-green">{{ tabMetrics().cagr | number:'1.1-1' }}%</span>
+        </div>
+
+      </div>
+
+      <!-- ── STOCKS TAB ───────────────────────────────────────────────────── -->
+      @if (activeTab() === 'stocks') {
+        <div class="tab-content-panel">
+          @if (holdings$ | async; as holdings) {
+            @if (holdings.length === 0) {
+              <div class="empty-holdings">
+                <mat-icon>pie_chart</mat-icon>
+                <p>No holdings yet.</p>
+                <a routerLink="/markets" mat-stroked-button>Browse Markets</a>
+              </div>
+            } @else {
+              <div class="holdings-list">
+                @for (h of sortedHoldings(holdings); track h.symbol) {
+                  <div class="hcard"
+                       [class.hcard-profit]="h.pnl > 0 && !isNeutral(h)"
+                       [class.hcard-loss]="h.pnl < 0 && !isNeutral(h)"
+                       [class.hcard-neutral]="isNeutral(h)"
+                       [routerLink]="['/stock-detail', h.symbol]"
+                       [queryParams]="{ source: 'dashboard' }">
+
+                    <!-- ROW 1: Qty · Avg  |  P&L % -->
+                    <span class="hc-meta">Qty {{ h.quantity }} &nbsp;·&nbsp; Avg ₹{{ h.averagePrice | number:'1.2-2' }}</span>
+                    <span class="hc-pnl-pct text-mono"
+                          [class.text-green]="h.pnl > 0 && !isNeutral(h)"
+                          [class.text-red]="h.pnl < 0 && !isNeutral(h)">
+                      {{ h.pnlPercent >= 0 ? '+' : '' }}{{ h.pnlPercent | number:'1.1-1' }}%
+                    </span>
+
+                    <!-- ROW 2: Symbol  |  P&L ₹ amount -->
+                    <span class="hc-symbol">{{ h.symbol }}</span>
+                    <span class="hc-pnl-amt text-mono"
+                          [class.text-green]="h.pnl > 0 && !isNeutral(h)"
+                          [class.text-red]="h.pnl < 0 && !isNeutral(h)">
+                      {{ h.pnl >= 0 ? '+' : '' }}₹{{ h.pnl | number:'1.0-0' }}
+                    </span>
+
+                    <!-- ROW 3: Invested  |  LTP + daily % -->
+                    <span class="hc-invested">Invested ₹{{ (h.quantity * h.averagePrice) | number:'1.0-0' }}</span>
+                    <span class="hc-ltp text-mono">
+                      LTP ₹{{ h.currentPrice | number:'1.2-2' }}
+                      <span class="hc-day-chg"
+                            [class.text-green]="h.dayChangePct >= 0"
+                            [class.text-red]="h.dayChangePct < 0">
+                        ({{ h.dayChangePct >= 0 ? '+' : '' }}{{ h.dayChangePct | number:'1.2-2' }}%)
+                      </span>
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- ── MUTUAL FUNDS TAB ─────────────────────────────────────────────── -->
+      @if (activeTab() === 'mf') {
+        <div class="mf-tab-content">
+          <div class="mf-fund-list">
+            @for (mf of mfHoldings(); track mf.name) {
+              <div class="mf-fcard"
+                   [class.mf-fcard-profit]="mf.pnl >= 0"
+                   [class.mf-fcard-loss]="mf.pnl < 0"
+                   (click)="goToFundDetail(mf.fundId)">
+
+                <!-- TOP: name + category badge  |  P&L % -->
+                <div class="mf-fcard-name-row">
+                  <div class="mf-fcard-name-wrap">
+                    <span class="mf-fcard-name">{{ mf.name }}</span>
+                    <span class="mf-fcard-cat" [attr.data-cat]="mf.category">{{ mf.category }}</span>
+                  </div>
+                  <span class="mf-pnl-pct text-mono"
+                        [class.text-green]="mf.pnl >= 0" [class.text-red]="mf.pnl < 0">
+                    {{ mf.pnlPct >= 0 ? '+' : '' }}{{ mf.pnlPct | number:'1.2-2' }}%
+                  </span>
+                </div>
+
+                <!-- BOTTOM: Invested  |  P&L amount -->
+                <div class="mf-fcard-bottom-row">
+                  <span class="mf-fcard-invested">Invested ₹{{ mf.invested | number:'1.0-0' }}</span>
+                  <span class="mf-pnl-amt text-mono"
+                        [class.text-green]="mf.pnl >= 0" [class.text-red]="mf.pnl < 0">
+                    {{ mf.pnl >= 0 ? '+' : '' }}₹{{ mf.pnl | number:'1.0-0' }}
+                  </span>
+                </div>
+
+                <!-- FOOTER: XIRR · CAGR -->
+                <div class="mf-fcard-rates">
+                  <span class="mf-rate-pill">XIRR {{ mf.xirr | number:'1.1-1' }}%</span>
+                  <span class="mf-rate-sep">·</span>
+                  <span class="mf-rate-pill">CAGR {{ mf.cagr | number:'1.1-1' }}%</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+    </div>
+
+    <!-- Right column: Watchlist + Market Indices -->
+    <div class="right-column">
+
+      <!-- ── Watchlist Widget ───────────────────────────────────────────── -->
+      <div class="widget-card">
+        <div class="widget-header">
+          <span class="widget-title">
+            <mat-icon>bookmark</mat-icon>
+            Watchlist
+          </span>
+          <a routerLink="/markets" class="wl-empty-link" style="font-size:11px">
+            Manage →
+          </a>
+        </div>
+        @if (watchlist$ | async; as wl) {
+          @if (wl.length === 0) {
+            <div class="wl-empty">
+              <mat-icon>push_pin</mat-icon>
+              <span>No pins yet</span>
+              <a routerLink="/markets" class="wl-empty-link">Pin stocks from Watchlists →</a>
+            </div>
+          } @else {
+            <div class="wl-list">
+              @for (q of wl; track q.symbol) {
+                <a class="wl-row"
+                   [routerLink]="['/stock-detail', q.symbol]"
+                   [queryParams]="{ source: 'dashboard' }">
+                  <span class="wl-sym">{{ q.symbol }}</span>
+                  <span class="wl-name">{{ q.name }}</span>
+                  <div class="wl-right">
+                    <span class="wl-price">₹{{ q.price | number:'1.2-2' }}</span>
+                    <span class="wl-chg"
+                          [class.text-green]="q.changePercent >= 0"
+                          [class.text-red]="q.changePercent < 0">
+                      {{ q.changePercent >= 0 ? '+' : '' }}{{ q.changePercent | number:'1.2-2' }}%
+                    </span>
+                  </div>
+                </a>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div class="widget-card">
+        <div class="widget-header">
+          <span class="widget-title">
+            <mat-icon>bar_chart</mat-icon>
+            Market Indices
+          </span>
+          <span class="live-chip">
+            <span class="live-dot"></span> LIVE
+          </span>
+        </div>
+        <div class="indices-list">
+          @for (idx of indices(); track idx.name) {
+            <div class="index-row">
+              <span class="idx-name">{{ idx.name }}</span>
+              <div class="idx-right">
+                <span class="idx-value text-mono">{{ idx.value | number:'1.2-2' }}</span>
+                <span class="idx-change text-mono"
+                      [class.text-green]="idx.change >= 0"
+                      [class.text-red]="idx.change < 0">
+                  {{ idx.change >= 0 ? '+' : '' }}{{ idx.change | number:'1.2-2' }}
+                  ({{ idx.changePct >= 0 ? '+' : '' }}{{ idx.changePct | number:'1.2-2' }}%)
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Mobile floating pills (Watchlist + Indices) ────────────────────── -->
+  <!-- Backdrop: closes the panel when tapped outside -->
+  @if (activePanel() !== null) {
+    <div class="mpb-backdrop" (click)="activePanel.set(null)"></div>
+  }
+
+  <!-- Two pill buttons fixed at top-right -->
+  <div class="mobile-panel-btns">
+    <button class="mpb-pill" [class.active]="activePanel() === 'watchlist'" (click)="togglePanel('watchlist')">
+      <mat-icon>bookmark</mat-icon> Watchlist
+    </button>
+    <button class="mpb-pill" [class.active]="activePanel() === 'indices'" (click)="togglePanel('indices')">
+      <mat-icon>bar_chart</mat-icon> Indices
+    </button>
+  </div>
+
+  <!-- Slide-down panel — shows whichever pill was tapped -->
+  @if (activePanel() !== null) {
+    <div class="mpb-panel">
+
+      @if (activePanel() === 'watchlist') {
+        <div class="widget-card">
+          <div class="widget-header">
+            <span class="widget-title"><mat-icon>bookmark</mat-icon> Watchlist</span>
+            <a routerLink="/markets" class="wl-empty-link" style="font-size:11px" (click)="activePanel.set(null)">
+              Manage →
+            </a>
+          </div>
+          @if (watchlist$ | async; as wl) {
+            @if (wl.length === 0) {
+              <div class="wl-empty">
+                <mat-icon>push_pin</mat-icon>
+                <span>No pins yet</span>
+                <a routerLink="/markets" class="wl-empty-link" (click)="activePanel.set(null)">Pin stocks from Watchlists →</a>
+              </div>
+            } @else {
+              <div class="wl-list">
+                @for (q of wl; track q.symbol) {
+                  <a class="wl-row"
+                     [routerLink]="['/stock-detail', q.symbol]"
+                     [queryParams]="{ source: 'dashboard' }"
+                     (click)="activePanel.set(null)">
+                    <span class="wl-sym">{{ q.symbol }}</span>
+                    <span class="wl-name">{{ q.name }}</span>
+                    <div class="wl-right">
+                      <span class="wl-price">₹{{ q.price | number:'1.2-2' }}</span>
+                      <span class="wl-chg"
+                            [class.text-green]="q.changePercent >= 0"
+                            [class.text-red]="q.changePercent < 0">
+                        {{ q.changePercent >= 0 ? '+' : '' }}{{ q.changePercent | number:'1.2-2' }}%
+                      </span>
+                    </div>
+                  </a>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activePanel() === 'indices') {
+        <div class="widget-card">
+          <div class="widget-header">
+            <span class="widget-title"><mat-icon>bar_chart</mat-icon> Market Indices</span>
+            <span class="live-chip"><span class="live-dot"></span> LIVE</span>
+          </div>
+          <div class="indices-list">
+            @for (idx of indices(); track idx.name) {
+              <div class="index-row">
+                <span class="idx-name">{{ idx.name }}</span>
+                <div class="idx-right">
+                  <span class="idx-value text-mono">{{ idx.value | number:'1.2-2' }}</span>
+                  <span class="idx-change text-mono"
+                        [class.text-green]="idx.change >= 0"
+                        [class.text-red]="idx.change < 0">
+                    {{ idx.change >= 0 ? '+' : '' }}{{ idx.change | number:'1.2-2' }}
+                    ({{ idx.changePct >= 0 ? '+' : '' }}{{ idx.changePct | number:'1.2-2' }}%)
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+</div>

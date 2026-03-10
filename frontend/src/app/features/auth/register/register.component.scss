@@ -1,0 +1,223 @@
+// Registration page styles — mirrors login page for visual consistency
+.register-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: var(--tf-bg-app);
+}
+
+.register-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-lg);
+  padding: 40px 36px;
+  box-shadow: var(--tf-shadow-lg);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--tf-cyan), transparent);
+    opacity: 0.6;
+  }
+}
+
+.brand-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--tf-cyan), #0ea5e9);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.logo-icon {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #000;
+}
+
+.brand-name {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tf-text-primary);
+}
+
+.brand-tagline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--tf-red-bg);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: var(--tf-radius-sm);
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--tf-red);
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.full-width { width: 100%; }
+
+.field-icon {
+  color: var(--tf-text-muted);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+// ── Password Strength Indicator ────────────────────────────────────────────
+// WHY visual strength meter? Reduces weak passwords without being annoying.
+// Visual feedback is more effective than text rules alone.
+.strength-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -8px 0 8px;
+  padding: 0 2px;
+}
+
+.strength-track {
+  flex: 1;
+  height: 3px;
+  background: var(--tf-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+
+  &.strength-weak   { width: 33%; background: var(--tf-red); }
+  &.strength-medium { width: 66%; background: var(--tf-yellow); }
+  &.strength-strong { width: 100%; background: var(--tf-green); }
+}
+
+.strength-label {
+  font-size: 11px;
+  font-weight: 500;
+  width: 44px;
+  text-align: right;
+
+  &.strength-weak   { color: var(--tf-red); }
+  &.strength-medium { color: var(--tf-yellow); }
+  &.strength-strong { color: var(--tf-green); }
+}
+
+// ── Submit Button ──────────────────────────────────────────────────────────
+.register-btn {
+  width: 100%;
+  height: 48px;
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 600;
+
+  // WHY ::ng-deep .mdc-button__label?
+  // Angular Material MDC wraps button content in <span class="mdc-button__label">.
+  // Flex on the host <button> doesn't affect the inner wrapper — icon and text stay stacked.
+  // We must pierce the shadow boundary to flex the label span directly.
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &:disabled { opacity: 0.7; }
+}
+
+// ── Password Mismatch Hint ─────────────────────────────────────────────────
+.password-mismatch-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tf-red);
+  animation: fadeIn 0.25s ease;
+
+  .mismatch-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ── Password Match Hint ────────────────────────────────────────────────────
+.password-match-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tf-green);
+  animation: fadeIn 0.3s ease;
+
+  .match-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Footer ─────────────────────────────────────────────────────────────────
+.login-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.footer-text { color: var(--tf-text-secondary); }
+
+.login-link {
+  color: var(--tf-cyan);
+  text-decoration: none;
+  font-weight: 500;
+  &:hover { color: var(--tf-text-link); text-decoration: underline; }
+}
+
+@media (max-width: 480px) {
+  .register-card { padding: 28px 20px; }
+}

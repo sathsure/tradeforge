@@ -1,0 +1,712 @@
+// Shell layout — the main chrome of the authenticated app
+// Uses CSS Grid for the two-column layout (sidebar + main).
+// WHY CSS Grid? Perfect for the "shell" pattern:
+// sidebar has fixed width, main takes remaining space.
+// Named grid areas make the layout intentions explicit.
+
+:host {
+  // WHY :host? Styles the component's HOST element (the custom element tag).
+  // <app-shell> itself needs display: block and full height.
+  // Without :host, the component element has no height and the layout collapses.
+  display: block;
+  height: 100vh;
+  // WHY 100vh? The shell should fill the ENTIRE viewport.
+  // Everything else scrolls WITHIN the main content area.
+  // This prevents the sidebar from scrolling when the page content scrolls.
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--tf-sidebar-width) 1fr;
+  // WHY grid-template-columns? Defines two columns:
+  // - sidebar: fixed 220px (from CSS var)
+  // - main: 1fr = "take all remaining space"
+  // If we had 3 columns, it would be: 220px 1fr 280px (sidebar, content, detail panel).
+  height: 100vh;
+  overflow: hidden;
+  // WHY overflow: hidden on shell? Content scrolls within main, not the shell itself.
+  // Prevents the sidebar from scrolling with the content.
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+.sidebar {
+  background: var(--tf-bg-sidebar);
+  border-right: 1px solid var(--tf-border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  z-index: 100;
+  // WHY z-index: 100? Sidebar's tooltips (matTooltip) render above main content.
+}
+
+// ── Brand ──────────────────────────────────────────────────────────────────
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  flex-shrink: 0;
+  // WHY flex-shrink: 0? Brand section should never shrink when sidebar is full.
+}
+
+.brand-logo-wrap {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--tf-cyan), #0ea5e9);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-logo-text {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #000;
+  letter-spacing: -0.5px;
+}
+
+.brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tf-text-primary);
+  letter-spacing: -0.3px;
+}
+
+.brand-divider {
+  margin: 0;
+  border-color: var(--tf-border-subtle) !important;
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────
+.nav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin: 0 8px;
+  text-decoration: none;
+  color: var(--tf-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.18s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+
+  // Hover: slide right + subtle bg
+  &:hover {
+    background: var(--tf-bg-elevated);
+    color: var(--tf-text-primary);
+    transform: translateX(3px);
+    .nav-icon { color: var(--tf-text-primary); }
+  }
+
+  // Active: cyan tint + left accent bar (animated in)
+  &.nav-item--active {
+    background: rgba(57, 208, 216, 0.12);
+    color: var(--tf-cyan);
+    transform: translateX(0); // reset hover shift when active
+    .nav-icon { color: var(--tf-cyan); }
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -8px; top: 50%;
+      width: 3px; height: 60%;
+      transform: translateY(-50%);
+      background: var(--tf-cyan);
+      border-radius: 0 2px 2px 0;
+      box-shadow: 0 0 8px rgba(57,208,216,0.5);
+      animation: navAccentIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+  }
+
+  @keyframes navAccentIn {
+    from { left: -12px; opacity: 0; }
+    to   { left: -8px;  opacity: 1; }
+  }
+
+  // Settings item sits at the bottom visually via sidebar-spacer above it.
+  &.nav-item--settings {
+    margin-top: 4px;
+    .nav-icon { color: var(--tf-text-muted); }
+    &:hover .nav-icon { color: var(--tf-text-primary); }
+    &.nav-item--active {
+      .nav-icon { color: var(--tf-cyan); }
+    }
+  }
+}
+
+// Staggered nav item entrance on sidebar load
+.nav-item:nth-child(1)  { animation: navItemIn 0.3s 0.05s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(2)  { animation: navItemIn 0.3s 0.10s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(3)  { animation: navItemIn 0.3s 0.15s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(4)  { animation: navItemIn 0.3s 0.20s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(5)  { animation: navItemIn 0.3s 0.25s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(6)  { animation: navItemIn 0.3s 0.30s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(7)  { animation: navItemIn 0.3s 0.35s cubic-bezier(0.4,0,0.2,1) both; }
+.nav-item:nth-child(8)  { animation: navItemIn 0.3s 0.40s cubic-bezier(0.4,0,0.2,1) both; }
+@keyframes navItemIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.nav-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ── Sidebar Spacer ─────────────────────────────────────────────────────────
+.sidebar-spacer {
+  flex: 1;
+  // flex: 1 = take all available remaining space.
+  // This pushes the user section to the BOTTOM of the sidebar.
+  // No matter how many nav items there are, user section stays at bottom.
+}
+
+// ── User Section ───────────────────────────────────────────────────────────
+.user-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 16px;
+  gap: 8px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--tf-cyan), #0ea5e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  font-size: 10px;
+  color: var(--tf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.logout-btn {
+  color: var(--tf-text-muted) !important;
+  width: 30px !important;
+  height: 30px !important;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--tf-red) !important;
+    background: rgba(248, 81, 73, 0.1) !important;
+  }
+
+  mat-icon { font-size: 18px; }
+}
+
+// ── Main Content Area ──────────────────────────────────────────────────────
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--tf-bg-app);
+}
+
+// Top status bar — market indices quick view
+.topbar {
+  height: var(--tf-topbar-height);
+  // WHY fixed height? Feature pages calculate their available height:
+  // available = 100vh - topbar-height.
+  // This prevents layout shift when topbar content changes.
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--tf-bg-surface);
+  border-bottom: 1px solid var(--tf-border);
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.market-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.status-dot--open {
+    background: var(--tf-green);
+    box-shadow: 0 0 6px var(--tf-green);
+    // WHY glow? Trading UX: green glow = market is active/live.
+    // Traders glance at this to know if they're seeing live data.
+    animation: pulse 2s infinite;
+  }
+
+  &.status-dot--closed {
+    background: var(--tf-text-muted);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-separator {
+  opacity: 0.3;
+}
+
+.status-text, .status-time {
+  font-size: 12px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+// WHY index-chip instead of nifty/sensex? Scalable — add more indices easily.
+.index-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--tf-bg-elevated);
+  border: 1px solid var(--tf-border-subtle);
+  border-radius: 4px;
+}
+
+.chip-label {
+  color: var(--tf-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.chip-change {
+  font-size: 11px;
+}
+
+
+// Notification bell button in topbar
+.notif-bell {
+  color: var(--tf-text-secondary) !important;
+
+  &:hover {
+    color: var(--tf-text-primary) !important;
+    background: var(--tf-bg-elevated) !important;
+  }
+
+  mat-icon { font-size: 20px; }
+}
+
+// ── Content Area ────────────────────────────────────────────────────────────
+.content {
+  flex: 1;
+  overflow-y: auto;
+  // WHY overflow-y: auto here?
+  // The CONTENT area scrolls, not the shell.
+  // Sidebar stays fixed while the right side scrolls.
+  // This is the "sticky sidebar" pattern.
+
+  // Thin scrollbar for dense data
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--tf-border); border-radius: 2px; }
+}
+
+// ── Mobile Bottom Navigation ─────────────────────────────────────────────────
+// WHY bottom nav? On mobile, a left sidebar is unusable — thumb cannot reach it.
+// Bottom nav is the industry standard for mobile trading apps (Kite, Groww, Zerodha).
+.mobile-nav {
+  display: none; // hidden on desktop/tablet — shown via media query below
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--tf-bg-sidebar);
+  border-top: 1px solid var(--tf-border);
+  flex-direction: row;
+  align-items: stretch;
+  z-index: 200;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.mnav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 56px;
+  padding: 6px 4px;
+  text-decoration: none;
+  color: var(--tf-text-muted);
+  transition: color 0.15s;
+
+  &.mnav-item--active {
+    color: var(--tf-cyan);
+    .mnav-icon { color: var(--tf-cyan); }
+  }
+  &:hover { color: var(--tf-text-primary); }
+}
+
+.mnav-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+
+.mnav-label {
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 52px;
+  text-align: center;
+}
+
+// ── Tablet (769px – 1024px): icon-only slim sidebar ──────────────────────────
+@media (max-width: 1024px) and (min-width: 769px) {
+  :host { --tf-sidebar-width-current: 64px; }
+
+  .shell {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .brand-name,
+  .nav-label,
+  .user-details {
+    display: none;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 14px 0;
+  }
+
+  .brand-logo-wrap { margin: 0 auto; }
+
+  .nav-item {
+    justify-content: center;
+    padding: 10px;
+    margin: 0 6px;
+    &:hover { transform: none; }
+  }
+
+  .nav-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .user-section {
+    justify-content: center;
+    padding: 10px 6px;
+  }
+
+  .user-info { justify-content: center; }
+
+  .logout-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+// ── Mobile (≤ 768px): bottom nav, no sidebar ─────────────────────────────────
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;  // full width — no sidebar column
+    grid-template-rows: 1fr;
+  }
+
+  .sidebar { display: none; }    // completely hidden on mobile
+
+  .main { height: 100vh; }
+
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .market-status { gap: 5px; font-size: 11px; }
+
+  .topbar-right { gap: 8px; }
+
+  .mobile-nav { display: flex; } // show the bottom nav on mobile
+
+  // Push content up so it isn't hidden behind the 60px bottom nav
+  .content { padding-bottom: 60px; }
+}
+
+// ── Dashboard global styles (for the DashboardComponent template-less styles) ──
+// These styles apply to page-container class used in multiple feature components
+::ng-deep .dashboard {
+  padding: var(--tf-space-lg);
+  max-width: 1400px;
+}
+
+::ng-deep .dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--tf-space-lg);
+  flex-wrap: wrap;
+  gap: var(--tf-space-md);
+}
+
+::ng-deep .greeting-text {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+}
+
+::ng-deep .greeting-date {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+}
+
+::ng-deep .section {
+  margin-bottom: var(--tf-space-xl);
+}
+
+::ng-deep .section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tf-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+::ng-deep .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+::ng-deep .stat-card {
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: border-color 0.15s;
+
+  &:hover { border-color: var(--tf-border-muted); }
+}
+
+::ng-deep .stat-icon-wrap {
+  width: 36px;
+  height: 36px;
+  background: rgba(57, 208, 216, 0.1);
+  border-radius: var(--tf-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon { color: var(--tf-cyan); font-size: 18px; }
+}
+
+::ng-deep .stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+::ng-deep .stat-label {
+  font-size: 11px;
+  color: var(--tf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+::ng-deep .stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--tf-text-primary);
+}
+
+::ng-deep .stat-change {
+  font-size: 12px;
+}
+
+::ng-deep .indices-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+::ng-deep .index-card {
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 3px solid transparent;
+
+  &.up { border-left-color: var(--tf-green); }
+  &.down { border-left-color: var(--tf-red); }
+}
+
+::ng-deep .index-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tf-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+::ng-deep .index-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--tf-text-primary);
+}
+
+::ng-deep .index-change {
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+::ng-deep .live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--tf-green);
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: var(--tf-green-bg);
+  padding: 2px 7px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+::ng-deep .live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tf-green);
+  animation: pulse 1.5s infinite;
+}
+
+::ng-deep .quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+::ng-deep .quick-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px;
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-md);
+  text-decoration: none;
+  color: var(--tf-text-secondary);
+  transition: all 0.15s;
+  cursor: pointer;
+
+  mat-icon { font-size: 28px; color: var(--tf-cyan); }
+  span:first-of-type { font-size: 14px; font-weight: 600; color: var(--tf-text-primary); }
+
+  &:hover {
+    border-color: var(--tf-cyan);
+    background: rgba(57, 208, 216, 0.05);
+    color: var(--tf-text-primary);
+  }
+}
+
+::ng-deep .quick-desc {
+  font-size: 11px;
+  color: var(--tf-text-muted);
+}
+
+::ng-deep .quick-action-btn {
+  color: var(--tf-cyan) !important;
+  border-color: var(--tf-cyan) !important;
+}
+
+// Add today date binding
+::ng-deep app-shell { }

@@ -1,0 +1,104 @@
+<!--
+  Verify Registration Page.
+  Shown after successful registration — user must enter the OTP sent to their email/phone.
+  Same card layout as login.component.html for visual consistency throughout the auth flow.
+-->
+<div class="verify-page">
+  <div class="verify-card">
+
+    <!-- ── Brand Header ──────────────────────────────────────────────────── -->
+    <div class="brand-header">
+      <div class="brand-logo"><span class="logo-icon">TF</span></div>
+      <h1 class="brand-name">TradeForge</h1>
+      <p class="brand-tagline">Verify Your Account</p>
+    </div>
+
+    <!-- ── Success/Welcome Banner ─────────────────────────────────────────── -->
+    <div class="welcome-banner">
+      <mat-icon class="welcome-icon">mark_email_read</mat-icon>
+      <div>
+        <p class="welcome-title">Almost there! 🚀</p>
+        <p class="welcome-sub">Your account is ready — just verify your identity to start trading.</p>
+      </div>
+    </div>
+
+    <!-- Error alert removed — shown inline below OTP boxes instead -->
+
+    <!-- ── Method Info ────────────────────────────────────────────────────── -->
+    @if (maskedContact$ | async; as contact) {
+      <div class="method-info">
+        @if ((method$ | async) === 'PHONE') {
+          <mat-icon class="method-icon">sms</mat-icon>
+          <p>We sent a 6-digit code to <strong>{{ contact }}</strong> via SMS.</p>
+        } @else {
+          <mat-icon class="method-icon">mail_outline</mat-icon>
+          <p>We sent a 6-digit code to <strong>{{ contact }}</strong>.</p>
+        }
+        <p class="method-sub">Enter the code below to activate your account.</p>
+      </div>
+    }
+
+    <!-- ── Six OTP Boxes ──────────────────────────────────────────────────── -->
+    <div class="otp-boxes" [class.otp-shake]="otpShaking" (paste)="onPaste($event)">
+      @for (digit of digits; track $index) {
+        <input
+          #digitInput
+          class="otp-box"
+          [class.otp-box--error]="!!otpErrorMessage"
+          type="text"
+          inputmode="numeric"
+          maxlength="1"
+          [value]="digit"
+          (input)="onDigitInput($event, $index)"
+          (keydown)="onKeydown($event, $index)"
+          autocomplete="one-time-code"
+          [attr.aria-label]="'Digit ' + ($index + 1) + ' of 6'"
+        />
+      }
+    </div>
+
+    <!-- ── Inline OTP Error ────────────────────────────────────────────────── -->
+    @if (otpErrorMessage) {
+      <div class="otp-error-msg" role="alert" aria-live="polite">
+        <mat-icon class="otp-error-icon">gpp_bad</mat-icon>
+        <span>{{ otpErrorMessage }}</span>
+      </div>
+    }
+
+    <!-- ── Verify Button ──────────────────────────────────────────────────── -->
+    <button mat-raised-button color="primary" class="verify-btn"
+            (click)="onVerify()"
+            [disabled]="(loading$ | async) || otp.length !== 6">
+      @if (loading$ | async) {
+        <mat-spinner diameter="20"></mat-spinner>
+        <span>Verifying...</span>
+      } @else {
+        <ng-container>
+          <mat-icon>verified_user</mat-icon>
+          <span>Verify & Activate Account</span>
+        </ng-container>
+      }
+    </button>
+
+    <!-- ── Resend ─────────────────────────────────────────────────────────── -->
+    <button mat-button class="resend-btn"
+            (click)="resendOtp()" [disabled]="resendCooldown > 0">
+      {{ resendCooldown > 0 ? 'Resend code in ' + resendCooldown + 's' : 'Resend code' }}
+    </button>
+
+    <!-- ── Back ──────────────────────────────────────────────────────────── -->
+    <button mat-button class="back-btn" (click)="onCancel()">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Back to registration</span>
+    </button>
+
+  </div><!-- /verify-card -->
+
+  <!-- Background decoration — matches login page visual style -->
+  <div class="bg-decoration" aria-hidden="true">
+    <div class="bg-line"></div>
+    <div class="bg-line"></div>
+    <div class="bg-line"></div>
+  </div>
+
+</div><!-- /verify-page -->

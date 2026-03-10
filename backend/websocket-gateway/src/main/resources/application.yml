@@ -1,0 +1,47 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: websocket-gateway
+
+  kafka:
+    # WHY Kafka consumer config?
+    # Sprint 2: MarketTickConsumer reads from 'market.ticks' topic.
+    # market-service publishes one tick per stock per second.
+    # websocket-gateway broadcasts these via STOMP to Angular clients.
+    bootstrap-servers: ${KAFKA_URI:localhost:9092}
+    consumer:
+      group-id: websocket-gateway
+      auto-offset-reset: latest
+      # WHY 'latest' instead of 'earliest'?
+      # Market ticks are real-time data — stale ticks from before startup are
+      # useless for live display. 'latest' starts consuming from now onward.
+      # Contrast with portfolio-service (earliest) which must not miss any order events.
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tradeforge: DEBUG
+    org.springframework.kafka: INFO
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

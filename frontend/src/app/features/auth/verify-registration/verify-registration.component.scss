@@ -1,0 +1,320 @@
+// Verify Registration page — same structure as login/two-factor for auth flow consistency.
+// Uses the same dark trading terminal CSS variables from styles.scss.
+
+.verify-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: var(--tf-bg-app);
+  position: relative;
+  overflow: hidden;
+}
+
+.verify-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-lg);
+  padding: 40px 36px;
+  box-shadow: var(--tf-shadow-lg);
+  position: relative;
+  z-index: 1;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--tf-cyan), transparent);
+    opacity: 0.6;
+  }
+}
+
+// ── Brand Header ─────────────────────────────────────────────────────────────
+
+.brand-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--tf-cyan), #0ea5e9);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.logo-icon {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #000;
+}
+
+.brand-name {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tf-text-primary);
+}
+
+.brand-tagline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+}
+
+// ── Welcome Banner ─────────────────────────────────────────────────────────
+
+.welcome-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(0, 212, 170, 0.08);
+  border: 1px solid rgba(0, 212, 170, 0.25);
+  border-radius: var(--tf-radius-sm);
+  margin-bottom: 20px;
+}
+
+.welcome-icon {
+  color: var(--tf-cyan);
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.welcome-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+}
+
+.welcome-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tf-text-secondary);
+  line-height: 1.4;
+}
+
+// ── Error Alert ──────────────────────────────────────────────────────────────
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--tf-red-bg);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: var(--tf-radius-sm);
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--tf-red);
+}
+
+.error-icon { font-size: 18px; }
+
+// ── Method Info ──────────────────────────────────────────────────────────────
+
+.method-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  margin-bottom: 24px;
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tf-text-secondary);
+    line-height: 1.5;
+
+    strong { color: var(--tf-text-primary); }
+  }
+}
+
+.method-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--tf-cyan);
+  margin-bottom: 8px;
+}
+
+.method-sub {
+  font-size: 12px !important;
+  color: var(--tf-text-muted) !important;
+  margin-top: 4px !important;
+}
+
+// ── OTP Boxes ─────────────────────────────────────────────────────────────────
+
+.otp-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.otp-box {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--tf-bg-input);
+  border: 1.5px solid var(--tf-border);
+  border-radius: var(--tf-radius-sm);
+  color: var(--tf-text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  caret-color: var(--tf-cyan);
+
+  &:focus {
+    border-color: var(--tf-cyan);
+    box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.18);
+  }
+
+  &:not(:placeholder-shown) {
+    border-color: var(--tf-cyan);
+    color: var(--tf-cyan);
+  }
+}
+
+// ── OTP Error State ────────────────────────────────────────────────────────────
+
+.otp-box--error {
+  border-color: var(--tf-red) !important;
+  color: var(--tf-red) !important;
+  box-shadow: 0 0 0 2px rgba(248, 81, 73, 0.18) !important;
+}
+
+.otp-error-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: -10px 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tf-red);
+  animation: fadeSlideIn 0.25s ease;
+
+  .otp-error-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-8px); }
+  30%       { transform: translateX(8px); }
+  45%       { transform: translateX(-6px); }
+  60%       { transform: translateX(6px); }
+  75%       { transform: translateX(-3px); }
+  90%       { transform: translateX(3px); }
+}
+
+.otp-shake { animation: shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+
+// ── Verify Button ─────────────────────────────────────────────────────────────
+
+.verify-btn {
+  width: 100%;
+  height: 48px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &:disabled { opacity: 0.7; }
+}
+
+// ── Resend Button ─────────────────────────────────────────────────────────────
+
+.resend-btn {
+  width: 100%;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+  margin-bottom: 8px;
+
+  &:not(:disabled) {
+    color: var(--tf-cyan);
+    &:hover { color: var(--tf-text-link); }
+  }
+}
+
+// ── Back Button ───────────────────────────────────────────────────────────────
+
+.back-btn {
+  width: 100%;
+  font-size: 13px;
+  color: var(--tf-text-muted);
+
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+// ── Background Decoration ─────────────────────────────────────────────────────
+
+.bg-decoration {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-line {
+  position: absolute;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, var(--tf-border), transparent);
+  opacity: 0.4;
+
+  &:nth-child(1) { left: 20%; }
+  &:nth-child(2) { left: 50%; }
+  &:nth-child(3) { left: 80%; }
+}
+
+@media (max-width: 480px) {
+  .verify-card { padding: 28px 20px; }
+
+  .otp-box {
+    width: 42px;
+    height: 50px;
+    font-size: 20px;
+  }
+}

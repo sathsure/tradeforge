@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TradeForge — Professional Trading Platform</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    WHY <base href="/">?
+    Angular Router uses this to construct all route URLs.
+    Without it, deep links (/dashboard, /markets) break on page refresh.
+    The browser wouldn't know the root URL of the app.
+  -->
+
+  <!-- Inter font — used across all trading platforms for its clarity at small sizes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Angular Material icons — sidebar navigation icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!--
+    WHY preconnect to fonts.googleapis.com?
+    Establishes connection early — reduces font load time by ~100ms.
+    Fonts are on the critical render path: page won't render text until fonts load.
+    Preconnect means DNS lookup + TCP + TLS handshake happens in parallel with HTML parsing.
+  -->
+</head>
+<body class="mat-typography">
+  <!--
+    WHY class="mat-typography"?
+    Angular Material looks for this class to apply global typography styles
+    (font-size, line-height, font-weight for h1-h6, p, etc).
+    Without it, Material components' typography won't cascade to surrounding text.
+  -->
+  <app-root></app-root>
+  <!--
+    app-root is the selector in AppComponent.
+    Angular replaces this tag with the compiled AppComponent template.
+    If Angular fails to bootstrap, the user sees an empty page.
+    (check browser console for errors)
+  -->
+</body>
+</html>

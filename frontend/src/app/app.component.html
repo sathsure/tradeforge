@@ -1,0 +1,16 @@
+<!--
+  WHY just <router-outlet>?
+  AppComponent is the ROOT — it should not contain any UI.
+  All layout (sidebar, topbar) is in ShellComponent which loads via the router.
+
+  The router decides what component to show here:
+  - /auth/login   → loads LoginComponent directly (no shell, full screen)
+  - /dashboard    → loads ShellComponent which internally has <router-outlet>
+                    for DashboardComponent
+  - /**           → loads NotFoundComponent
+
+  This two-level router-outlet pattern allows:
+  - Auth pages: full-screen login/register (no navigation sidebar)
+  - Protected pages: wrapped in Shell with sidebar navigation
+-->
+<router-outlet />

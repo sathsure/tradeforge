@@ -1,0 +1,71 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: portfolio-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_URL:localhost:5433}/tradeforge
+    username: ${DB_USER:tradeforge}
+    password: ${DB_PASS:tradeforge123}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        default_schema: portfolio
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    schemas: portfolio
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_URI:localhost:9092}
+    consumer:
+      group-id: portfolio-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+# WHY market-service.url?
+# PortfolioService calls market-service REST API to get live prices.
+# Using a config property makes it easy to change the URL for Docker/Kubernetes deployment.
+# Docker: market-service:8083, Kubernetes: http://market-service.default.svc.cluster.local
+market-service:
+  url: ${MARKET_SERVICE_URL:http://localhost:8083}
+
+jwt:
+  # Same base64-encoded key as auth-service (same signing algorithm, same key material)
+  # base64("tradeforge-super-secret-jwt-key-change-in-production-min-256-bits")
+  secret: ${JWT_SECRET:dHJhZGVmb3JnZS1zdXBlci1zZWNyZXQtand0LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1taW4tMjU2LWJpdHM=}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tradeforge: DEBUG
+    org.springframework.kafka: INFO
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

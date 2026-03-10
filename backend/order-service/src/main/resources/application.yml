@@ -1,0 +1,87 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: order-service
+    # WHY this name? API Gateway routes /api/orders/** to lb://order-service
+
+  # WHY datasource config?
+  # Sprint 2: orders are persisted to PostgreSQL.
+  # Uses the orders schema (created by Flyway V1 migration).
+  # DB_URL defaults to Docker PostgreSQL on port 5433 (local PG occupies 5432).
+  datasource:
+    url: jdbc:postgresql://${DB_URL:localhost:5433}/tradeforge
+    username: ${DB_USER:tradeforge}
+    password: ${DB_PASS:tradeforge123}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # WHY hibernate.default_schema?
+    # Sets the default schema for JPA entities. Order entity maps to 'orders.orders'.
+    # Without this, Hibernate looks in the 'public' schema.
+    properties:
+      hibernate:
+        default_schema: orders
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    # WHY validate not update?
+    # 'validate': Hibernate checks schema matches entities at startup — safe for prod.
+    # 'update': Hibernate auto-alters tables — risky, could drop columns with data.
+    # Flyway manages schema changes explicitly; Hibernate just validates.
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    # WHY schemas = orders?
+    # Flyway creates the flyway_schema_history table in the 'orders' schema,
+    # not the default 'public'. Keeps each service's migration history separate.
+    schemas: orders
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    # WHY baseline-on-migrate?
+    # If the DB already has the orders schema from a previous run (e.g., manual creation),
+    # Flyway won't fail — it baselines the existing state and applies new migrations only.
+
+  kafka:
+    bootstrap-servers: ${KAFKA_URI:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+
+# WHY jwt.secret here?
+# JwtUtil needs the same secret key used by auth-service to sign tokens.
+# In production: store in Vault or K8s Secret, not in application.yml.
+# Must be Base64-encoded — same value as in auth-service application.yml.
+jwt:
+  # WHY this secret? Must match auth-service's jwt.secret exactly.
+  # auth-service takes the plain string and base64-encodes it before using as HMAC key.
+  # We store the base64-encoded version here so our JwtUtil.java can decode it directly.
+  # base64("tradeforge-super-secret-jwt-key-change-in-production-min-256-bits")
+  secret: ${JWT_SECRET:dHJhZGVmb3JnZS1zdXBlci1zZWNyZXQtand0LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1taW4tMjU2LWJpdHM=}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tradeforge: DEBUG
+    org.springframework.kafka: INFO
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

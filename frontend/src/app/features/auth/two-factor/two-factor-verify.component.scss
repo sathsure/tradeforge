@@ -1,0 +1,233 @@
+// WHY mirror login.component.scss structure?
+// Consistent auth flow UX — same card layout, same brand header, same error alert.
+// Users feel they're still in the same auth flow, not on a different page.
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: var(--tf-bg-app);
+  position: relative;
+  overflow: hidden;
+}
+
+// ── Login Card ──────────────────────────────────────────────────────────────
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--tf-bg-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: var(--tf-radius-lg);
+  padding: 40px 36px;
+  box-shadow: var(--tf-shadow-lg);
+  position: relative;
+  z-index: 1;
+
+  // Subtle cyan top glow — same as login card
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--tf-cyan), transparent);
+    opacity: 0.6;
+  }
+}
+
+// ── Brand Header ─────────────────────────────────────────────────────────────
+.brand-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, var(--tf-cyan), #0ea5e9);
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.logo-icon {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #000;
+  letter-spacing: -1px;
+}
+
+.brand-name {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tf-text-primary);
+  letter-spacing: -0.5px;
+}
+
+.brand-tagline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+}
+
+// ── Error Alert ───────────────────────────────────────────────────────────────
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.3);
+  border-radius: var(--tf-radius-sm);
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--tf-red);
+
+  .error-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+}
+
+// ── Method Info ───────────────────────────────────────────────────────────────
+.method-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 28px;
+
+  .method-icon {
+    font-size: 44px;
+    width: 44px;
+    height: 44px;
+    color: var(--tf-cyan);
+    margin-bottom: 10px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--tf-text-secondary);
+    line-height: 1.5;
+  }
+}
+
+// ── OTP Digit Boxes ───────────────────────────────────────────────────────────
+.otp-boxes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.otp-box {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--tf-bg-elevated);
+  border: 2px solid var(--tf-border);
+  border-radius: 8px;
+  color: var(--tf-text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+  caret-color: var(--tf-cyan);
+
+  // WHY :focus? Gives clear visual feedback for keyboard navigation.
+  &:focus { border-color: var(--tf-cyan); }
+}
+
+// ── Trust Device Checkbox ─────────────────────────────────────────────────────
+.trust-row {
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+// ── Verify / WebAuthn Buttons ─────────────────────────────────────────────────
+.verify-btn,
+.webauthn-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+
+  // WHY ng-deep? Same as login button — Mat MDC button label needs flex for icon+text.
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &:disabled { opacity: 0.7; }
+}
+
+.webauthn-section {
+  margin-bottom: 20px;
+}
+
+// ── Secondary Buttons ─────────────────────────────────────────────────────────
+.resend-btn,
+.back-btn {
+  width: 100%;
+  font-size: 13px;
+  color: var(--tf-text-secondary);
+  margin-top: 4px;
+
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+}
+
+// ── Background Decoration ─────────────────────────────────────────────────────
+.bg-decoration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--tf-border-subtle) 20%,
+    var(--tf-border-subtle) 80%,
+    transparent 100%
+  );
+
+  &:nth-child(1) { top: 25%; }
+  &:nth-child(2) { top: 50%; }
+  &:nth-child(3) { top: 75%; }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 20px;
+    border-radius: var(--tf-radius-md);
+  }
+
+  .otp-box {
+    width: 42px;
+    height: 50px;
+    font-size: 18px;
+  }
+
+  .otp-boxes { gap: 7px; }
+}

@@ -1,0 +1,65 @@
+# ===== Maven / Java Backend =====
+**/target/
+**/.mvn/
+!**/src/main/**
+!**/src/test/**
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# ===== Angular / Node Frontend =====
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.sass-cache/
+frontend/connect.lock
+frontend/coverage/
+frontend/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+
+# ===== IDE =====
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===== Logs =====
+*.log
+logs/
+/api-gateway.log
+/auth-service.log
+/market-service.log
+/order-service.log
+/portfolio-service.log
+/websocket-gateway.log
+/frontend.log
+
+# ===== Environment / Secrets =====
+.env
+.env.*
+!.env.example
+application-local.yml
+application-prod.yml
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===== Claude AI memory =====
+.claude/
+
+# ===== Docker =====
+# (keep docker-compose.yml and Dockerfiles)
+.docker/

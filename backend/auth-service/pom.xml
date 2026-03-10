@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    WHY Spring Boot Parent?
+    Inherits dependency management — no need to specify versions for most libraries.
+    Spring Boot ensures all dependencies are compatible with each other.
+    Without this, you'd manually resolve version conflicts between 50+ libraries.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.3</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.tradeforge</groupId>
+    <artifactId>auth-service</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>TradeForge Auth Service</name>
+    <description>Authentication and Authorization Microservice</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <!-- WHY Java 21? Virtual Threads (Project Loom) — handle 10k connections
+             without 10k OS threads. Records for clean DTOs. Pattern matching. -->
+        <jjwt.version>0.12.5</jjwt.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- Spring Web — REST controllers, HTTP handling, embedded Tomcat -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Security — authentication, authorization filter chain
+             WHY? Every request to this service goes through the security filter.
+             Prevents unauthenticated access to protected endpoints. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Spring Data JPA — ORM, repository pattern
+             WHY? Write Java objects, not SQL. Flyway handles migrations.
+             JPA prevents SQL injection via parameterized queries automatically. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver — connects Java to Postgres -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Flyway — database schema versioning
+             WHY? Your DB schema is code. V1, V2, V3 migrations tracked in Git.
+             Roll back schema the same way you roll back code. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <!-- Redis — for refresh token storage and JWT blacklisting
+             WHY Redis and not DB? Refresh token lookup happens on EVERY request.
+             Redis: <1ms. PostgreSQL: 5-10ms. Multiplied by millions of requests = huge. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- JWT library — create and validate JSON Web Tokens
+             WHY JWT? Stateless auth. Server doesn't store session.
+             Any microservice can validate the token using the secret — no DB call. -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Validation — @NotNull, @Email, @Size on DTOs
+             WHY? Validate input at the boundary. Never trust what comes in from HTTP. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+            <!-- WHY spring-boot-starter-mail? Enables JavaMailSender for sending OTP emails.
+                 Auto-configures SMTP connection pool from application.yml spring.mail.* settings. -->
+        </dependency>
+
+        <!-- Eureka Client — registers this service with Eureka Server
+             WHY? API Gateway discovers auth-service by name, not hardcoded IP.
+             Enables load balancing when you run multiple instances. -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
+        <!-- Actuator — /health, /metrics, /info endpoints
+             WHY? Docker healthcheck, Kubernetes liveness probes, monitoring. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- Spring Cloud BOM — manages versions of all Spring Cloud dependencies -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2023.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- WHY this plugin? Creates a fat JAR with all dependencies included.
+                     Run with: java -jar auth-service.jar — no classpath setup needed. -->
+                <configuration>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

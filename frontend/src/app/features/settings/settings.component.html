@@ -1,0 +1,588 @@
+<!--
+  Settings Page Layout:
+  Two-column — section nav on left, content on right.
+  Mirrors macOS System Settings / VS Code Settings UX.
+  WHY this layout? Professional, scannable, familiar to power users.
+  Left panel shows all sections at a glance — user knows what's configurable.
+  Right panel shows detail without navigation away from the page.
+-->
+
+<div class="settings-container">
+
+  <!-- ── Page Header ──────────────────────────────────────────────────── -->
+  <div class="settings-header">
+    <div class="header-left">
+      <h1 class="settings-title">Settings</h1>
+      <p class="settings-subtitle">Customize your TradeForge experience</p>
+    </div>
+
+    @if (settings$ | async; as settings) {
+      @if (hasChanges(settings)) {
+        <button mat-stroked-button class="reset-btn" (click)="resetToDefaults()"
+          matTooltip="Restore all settings to their original defaults">
+          <mat-icon>restart_alt</mat-icon>
+          Reset to Defaults
+        </button>
+      }
+    }
+  </div>
+
+  <!-- ── Two-Column Layout ────────────────────────────────────────────── -->
+  <div class="settings-body">
+
+    <!-- Left: Section Navigation -->
+    <nav class="sections-nav" aria-label="Settings sections">
+      @for (section of sections; track section.id) {
+        <button
+          class="section-btn"
+          [class.section-btn--active]="activeSection() === section.id"
+          (click)="selectSection(section.id)"
+          matRipple
+        >
+          <mat-icon class="section-icon">{{ section.icon }}</mat-icon>
+          <span class="section-label">{{ section.label }}</span>
+          @if (section.badge) {
+            <span class="section-badge">{{ section.badge }}</span>
+          }
+          <mat-icon class="section-chevron">chevron_right</mat-icon>
+        </button>
+      }
+    </nav>
+
+    <!-- Right: Section Content -->
+    @if (settings$ | async; as settings) {
+      <div class="section-content" [attr.data-section]="activeSection()">
+
+        <!-- ══ APPEARANCE ══════════════════════════════════════════════ -->
+        @if (activeSection() === 'appearance') {
+          <div class="section-panel" @fadeIn>
+
+            <!-- Theme -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">wb_sunny</mat-icon>
+                <div>
+                  <h3 class="group-title">Theme</h3>
+                  <p class="group-desc">Choose how TradeForge looks to you. Dark mode is recommended for extended trading sessions.</p>
+                </div>
+              </div>
+
+              <div class="theme-cards">
+                <button
+                  class="theme-card"
+                  [class.theme-card--selected]="settings.theme === 'dark'"
+                  (click)="setTheme('dark')"
+                  matRipple
+                >
+                  <div class="theme-preview theme-preview--dark">
+                    <div class="preview-sidebar"></div>
+                    <div class="preview-content">
+                      <div class="preview-bar"></div>
+                      <div class="preview-row"></div>
+                      <div class="preview-row preview-row--short"></div>
+                    </div>
+                  </div>
+                  <div class="theme-card-label">
+                    <mat-icon>{{ settings.theme === 'dark' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                    Dark
+                  </div>
+                </button>
+
+                <button
+                  class="theme-card"
+                  [class.theme-card--selected]="settings.theme === 'light'"
+                  (click)="setTheme('light')"
+                  matRipple
+                >
+                  <div class="theme-preview theme-preview--light">
+                    <div class="preview-sidebar"></div>
+                    <div class="preview-content">
+                      <div class="preview-bar"></div>
+                      <div class="preview-row"></div>
+                      <div class="preview-row preview-row--short"></div>
+                    </div>
+                  </div>
+                  <div class="theme-card-label">
+                    <mat-icon>{{ settings.theme === 'light' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                    Light
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- P&L Color Scheme -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">show_chart</mat-icon>
+                <div>
+                  <h3 class="group-title">P&amp;L Color Scheme</h3>
+                  <p class="group-desc">Choose how gains and losses are displayed. Some traders prefer the traditional Red=Gain style used in Asian markets.</p>
+                </div>
+              </div>
+
+              <div class="color-scheme-options">
+                <button
+                  class="scheme-option"
+                  [class.scheme-option--selected]="settings.pnlColorScheme === 'green-red'"
+                  (click)="setPnlScheme('green-red')"
+                  matRipple
+                >
+                  <div class="scheme-preview">
+                    <span class="scheme-up" style="color: #3fb950">▲ +2.4%</span>
+                    <span class="scheme-down" style="color: #f85149">▼ -1.1%</span>
+                  </div>
+                  <div class="scheme-label">
+                    <mat-icon>{{ settings.pnlColorScheme === 'green-red' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                    Green = Gain (Default)
+                  </div>
+                </button>
+
+                <button
+                  class="scheme-option"
+                  [class.scheme-option--selected]="settings.pnlColorScheme === 'red-green'"
+                  (click)="setPnlScheme('red-green')"
+                  matRipple
+                >
+                  <div class="scheme-preview">
+                    <span class="scheme-up" style="color: #f85149">▲ +2.4%</span>
+                    <span class="scheme-down" style="color: #3fb950">▼ -1.1%</span>
+                  </div>
+                  <div class="scheme-label">
+                    <mat-icon>{{ settings.pnlColorScheme === 'red-green' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                    Red = Gain (Asian Style)
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Compact Mode -->
+            <div class="setting-row">
+              <div class="setting-info">
+                <mat-icon class="setting-icon">density_small</mat-icon>
+                <div>
+                  <span class="setting-label">Compact Mode</span>
+                  <span class="setting-desc">Reduce padding and font sizes to fit more data on screen. Ideal for small monitors or data-dense views.</span>
+                </div>
+              </div>
+              <mat-slide-toggle
+                [checked]="settings.compactMode"
+                (change)="setCompactMode($event.checked)"
+                color="primary"
+              ></mat-slide-toggle>
+            </div>
+
+          </div>
+        }
+
+        <!-- ══ TRADING PREFERENCES ════════════════════════════════════ -->
+        @if (activeSection() === 'trading') {
+          <div class="section-panel">
+
+            <!-- Default Order Type -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">receipt_long</mat-icon>
+                <div>
+                  <h3 class="group-title">Default Order Type</h3>
+                  <p class="group-desc">Pre-selected order type when opening the order form. Saves a click for your most-used order style.</p>
+                </div>
+              </div>
+
+              <div class="chip-selector">
+                @for (type of ['MARKET', 'LIMIT', 'SL']; track type) {
+                  <button
+                    class="type-chip"
+                    [class.type-chip--active]="settings.defaultOrderType === type"
+                    (click)="setOrderType($any(type))"
+                    matRipple
+                  >{{ type }}</button>
+                }
+              </div>
+
+              <div class="order-type-desc">
+                @switch (settings.defaultOrderType) {
+                  @case ('MARKET') {
+                    <p class="type-hint"><strong>Market Order:</strong> Executes immediately at best available price. Fast but price may differ from expected in volatile stocks.</p>
+                  }
+                  @case ('LIMIT') {
+                    <p class="type-hint"><strong>Limit Order:</strong> Executes only at your specified price or better. Gives price control, but may not execute if price moves away.</p>
+                  }
+                  @case ('SL') {
+                    <p class="type-hint"><strong>Stop-Loss Order:</strong> Triggers when price hits your stop price, then executes as a market order. Used for risk management.</p>
+                  }
+                }
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Default Exchange -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">account_balance</mat-icon>
+                <div>
+                  <h3 class="group-title">Default Exchange</h3>
+                  <p class="group-desc">Pre-selected exchange in the order form. NSE has higher liquidity for most stocks.</p>
+                </div>
+              </div>
+
+              <div class="chip-selector">
+                @for (exchange of ['NSE', 'BSE']; track exchange) {
+                  <button
+                    class="type-chip"
+                    [class.type-chip--active]="settings.defaultExchange === exchange"
+                    (click)="setExchange($any(exchange))"
+                    matRipple
+                  >{{ exchange }}</button>
+                }
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Order Confirmation -->
+            <div class="setting-row">
+              <div class="setting-info">
+                <mat-icon class="setting-icon">verified</mat-icon>
+                <div>
+                  <span class="setting-label">Order Confirmation Dialog</span>
+                  <span class="setting-desc">Show a confirmation popup before placing every order. Recommended for beginners to prevent accidental trades.</span>
+                </div>
+              </div>
+              <mat-slide-toggle
+                [checked]="settings.confirmOrders"
+                [disabled]="settings.oneClickTrading"
+                (change)="setConfirmOrders($event.checked)"
+                color="primary"
+              ></mat-slide-toggle>
+            </div>
+
+            <!-- One-Click Trading -->
+            <div class="setting-row setting-row--danger">
+              <div class="setting-info">
+                <mat-icon class="setting-icon setting-icon--warn">bolt</mat-icon>
+                <div>
+                  <span class="setting-label">One-Click Trading
+                    <span class="badge-expert">Expert</span>
+                  </span>
+                  <span class="setting-desc">Execute market orders instantly without confirmation. Disables confirmation dialog. Use with caution — mistakes cannot be undone.</span>
+                </div>
+              </div>
+              <mat-slide-toggle
+                [checked]="settings.oneClickTrading"
+                (change)="setOneClickTrading($event.checked)"
+                color="warn"
+              ></mat-slide-toggle>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Auto Square-Off -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">schedule</mat-icon>
+                <div>
+                  <h3 class="group-title">Auto Square-Off Time</h3>
+                  <p class="group-desc">Automatically close all intraday positions at this time. SEBI requires brokers to square off MIS positions by 3:20 PM. This setting adjusts your personal preference.</p>
+                </div>
+              </div>
+
+              <div class="squareoff-options">
+                @for (time of ['14:45', '15:00', '15:10', '15:15', '15:20']; track time) {
+                  <button
+                    class="type-chip"
+                    [class.type-chip--active]="settings.autoSquareOffTime === time"
+                    (click)="setAutoSquareOff(time)"
+                    matRipple
+                  >{{ time }}</button>
+                }
+              </div>
+            </div>
+
+          </div>
+        }
+
+        <!-- ══ NOTIFICATIONS ══════════════════════════════════════════ -->
+        @if (activeSection() === 'notifications') {
+          <div class="section-panel">
+
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">notifications_active</mat-icon>
+                <div>
+                  <h3 class="group-title">Alert Preferences</h3>
+                  <p class="group-desc">Control which events trigger in-app notifications. All alerts appear in the notification center (top bar).</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Alerts -->
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="notif-icon-wrap notif-icon-wrap--blue">
+                  <mat-icon>receipt_long</mat-icon>
+                </div>
+                <div>
+                  <span class="setting-label">Order Execution Alerts</span>
+                  <span class="setting-desc">Notify when orders are placed, filled, partially filled, or rejected.</span>
+                </div>
+              </div>
+              <mat-slide-toggle [checked]="settings.orderAlerts" (change)="setOrderAlerts($event.checked)" color="primary"></mat-slide-toggle>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Price Alerts -->
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="notif-icon-wrap notif-icon-wrap--yellow">
+                  <mat-icon>price_change</mat-icon>
+                </div>
+                <div>
+                  <span class="setting-label">Price Alerts</span>
+                  <span class="setting-desc">Notify when a watched stock hits your set price target. Set targets from the Markets page.</span>
+                </div>
+              </div>
+              <mat-slide-toggle [checked]="settings.priceAlerts" (change)="setPriceAlerts($event.checked)" color="primary"></mat-slide-toggle>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- P&L Alerts -->
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="notif-icon-wrap notif-icon-wrap--green">
+                  <mat-icon>trending_up</mat-icon>
+                </div>
+                <div>
+                  <span class="setting-label">P&amp;L Milestone Alerts</span>
+                  <span class="setting-desc">Notify when your portfolio P&amp;L crosses ±₹5,000, ±₹10,000, or ±₹25,000 in a single session.</span>
+                </div>
+              </div>
+              <mat-slide-toggle [checked]="settings.pnlAlerts" (change)="setPnlAlerts($event.checked)" color="primary"></mat-slide-toggle>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="info-banner">
+              <mat-icon>info</mat-icon>
+              <span>Push notifications require browser permission. Click the bell icon in your browser's address bar to enable them.</span>
+            </div>
+
+          </div>
+        }
+
+        <!-- ══ SECURITY ══════════════════════════════════════════════ -->
+        @if (activeSection() === 'security') {
+          <div class="section-panel">
+
+            <!-- 2FA header row -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">shield</mat-icon>
+                <div>
+                  <h3 class="group-title">Two-Factor Authentication</h3>
+                  <p class="group-desc">Add a second verification step at login. Choose between email/SMS one-time codes or biometric authentication.</p>
+                </div>
+              </div>
+
+              <!-- Status badge row -->
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div>
+                    <h3>Two-Factor Authentication</h3>
+                    <p>Add a second verification step at login</p>
+                  </div>
+                </div>
+                @if (twoFactorStatus()) {
+                  <span class="status-badge" [class.active]="twoFactorStatus()!.enabled">
+                    {{ twoFactorStatus()!.enabled ? 'ON' : 'OFF' }}
+                  </span>
+                }
+              </div>
+
+              <!-- Active info strip -->
+              @if (twoFactorStatus()?.enabled) {
+                <div class="tfa-active-info">
+                  <mat-icon class="tfa-icon-sm">verified_user</mat-icon>
+                  <span>Active — method: <strong>{{ twoFactorStatus()?.method }}</strong></span>
+                  <button mat-stroked-button color="warn" class="disable-btn" (click)="disable2fa()">
+                    <mat-icon>security</mat-icon> Disable 2FA
+                  </button>
+                </div>
+              }
+
+              <!-- Setup section (shown only when 2FA is not yet enabled) -->
+              @if (!twoFactorStatus()?.enabled) {
+                <div class="tfa-setup">
+                  <p class="tfa-hint">Choose your verification method:</p>
+                  <div class="method-chips">
+                    <button class="method-chip" [class.active]="selectedMethod() === 'EMAIL'"
+                            (click)="selectedMethod.set('EMAIL')">
+                      <mat-icon>mail</mat-icon> Email OTP
+                    </button>
+                    <button class="method-chip" [class.active]="selectedMethod() === 'SMS'"
+                            (click)="selectedMethod.set('SMS')">
+                      <mat-icon>sms</mat-icon> SMS OTP
+                    </button>
+                    @if (webAuthnSupported) {
+                      <button class="method-chip" [class.active]="selectedMethod() === 'WEBAUTHN'"
+                              (click)="selectedMethod.set('WEBAUTHN')">
+                        <mat-icon>fingerprint</mat-icon> Biometric
+                      </button>
+                    }
+                  </div>
+
+                  @if (selectedMethod() !== 'WEBAUTHN') {
+                    @if (!enrollOtpSent()) {
+                      <button mat-stroked-button color="primary" (click)="sendEnrollOtp()">
+                        <mat-icon>send</mat-icon> Send verification code
+                      </button>
+                    } @else {
+                      <div class="enroll-otp-row">
+                        <input class="otp-input" type="text" inputmode="numeric" maxlength="6"
+                               placeholder="Enter 6-digit code"
+                               [(ngModel)]="enrollOtpValue"
+                               (ngModelChange)="enrollOtp.set($event)" />
+                        <button mat-raised-button color="primary" (click)="verifyEnrollOtp()">
+                          Activate 2FA
+                        </button>
+                      </div>
+                    }
+                  } @else {
+                    <button mat-stroked-button color="primary" (click)="registerWebAuthn()">
+                      <mat-icon>add</mat-icon> Register biometric / security key
+                    </button>
+                  }
+                </div>
+              }
+
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Trusted Devices list (shown only when 2FA is enabled and devices exist) -->
+            @if (twoFactorStatus()?.enabled && trustedDevices().length > 0) {
+              <div class="trusted-devices setting-group">
+                <h4>Trusted Devices</h4>
+                @for (device of trustedDevices(); track device.id) {
+                  <div class="device-row">
+                    <mat-icon>devices</mat-icon>
+                    <div class="device-info">
+                      <span class="device-name">{{ device.deviceName || 'Unknown device' }}</span>
+                      <span class="device-meta">{{ device.ipAddress }} &middot; expires {{ device.expiresAt | date:'mediumDate' }}</span>
+                    </div>
+                    <button mat-icon-button color="warn" (click)="revokeDevice(device.id)"
+                            matTooltip="Remove this device">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                }
+              </div>
+              <mat-divider></mat-divider>
+            }
+
+            <!-- Session Timeout -->
+            <div class="setting-group">
+              <div class="group-header">
+                <mat-icon class="group-icon">timer</mat-icon>
+                <div>
+                  <h3 class="group-title">Session Timeout</h3>
+                  <p class="group-desc">Automatically log out after a period of inactivity. Protects your account if you leave your terminal unattended.</p>
+                </div>
+              </div>
+
+              <div class="chip-selector">
+                @for (mins of [15, 30, 60, 120, 240]; track mins) {
+                  <button
+                    class="type-chip"
+                    [class.type-chip--active]="settings.sessionTimeoutMinutes === mins"
+                    (click)="setSessionTimeout(mins)"
+                    matRipple
+                  >{{ mins < 60 ? mins + ' min' : (mins / 60) + ' hr' }}</button>
+                }
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Security Info -->
+            <div class="security-info-cards">
+              <div class="info-card info-card--green">
+                <mat-icon>lock</mat-icon>
+                <div>
+                  <strong>End-to-End Encrypted</strong>
+                  <span>All communication uses TLS 1.3. Credentials are BCrypt hashed with cost factor 10.</span>
+                </div>
+              </div>
+              <div class="info-card info-card--blue">
+                <mat-icon>key</mat-icon>
+                <div>
+                  <strong>JWT Tokens</strong>
+                  <span>Access tokens expire in 15 minutes. Refresh tokens auto-renew silently in the background.</span>
+                </div>
+              </div>
+              <div class="info-card info-card--yellow">
+                <mat-icon>history</mat-icon>
+                <div>
+                  <strong>Session Audit Log</strong>
+                  <span>All login events and critical actions are logged with IP address and timestamp.</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        }
+
+        <!-- ══ ABOUT ══════════════════════════════════════════════════ -->
+        @if (activeSection() === 'about') {
+          <div class="section-panel">
+
+            <div class="about-hero">
+              <div class="about-logo">
+                <span>TF</span>
+              </div>
+              <div class="about-info">
+                <h2>TradeForge</h2>
+                <p class="about-version">Version 1.0.0 — Sprint 1</p>
+                <p class="about-tagline">Professional trading platform for Indian markets</p>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="about-stack">
+              <h3 class="group-title">Technology Stack</h3>
+              <div class="stack-grid">
+                @for (tech of techStack; track tech.name) {
+                  <div class="stack-item">
+                    <span class="stack-badge" [style.background]="tech.color + '22'" [style.color]="tech.color">
+                      {{ tech.name }}
+                    </span>
+                    <span class="stack-version">{{ tech.version }}</span>
+                    <span class="stack-role">{{ tech.role }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="about-footer">
+              <span>© {{ currentYear }} TradeForge. Built for learning.</span>
+              <span class="text-muted">SEBI Registered: Demo Only — Not for real trading</span>
+            </div>
+
+          </div>
+        }
+
+      </div><!-- /section-content -->
+    }
+
+  </div><!-- /settings-body -->
+
+</div><!-- /settings-container -->

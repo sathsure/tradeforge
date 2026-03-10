@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    WHY Spring Boot parent?
+    Manages versions for ALL Spring dependencies — they're tested to work together.
+    Without it: manually find compatible versions of Spring Cloud Gateway + WebFlux + Reactor.
+    Version conflicts cause cryptic ClassNotFoundException at runtime.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.3</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.tradeforge</groupId>
+    <artifactId>api-gateway</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>TradeForge API Gateway</name>
+    <description>
+        Single entry point for all Angular requests.
+        Routes /api/auth/** to auth-service, /api/markets/** to market-service, etc.
+        Also handles: CORS (once, centrally), rate limiting, circuit breaking.
+        Angular only needs to know ONE URL: http://localhost:8080.
+    </description>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+
+    <dependencies>
+
+        <!--
+        Spring Cloud Gateway (REACTIVE)
+        WHY reactive (WebFlux) and not servlet-based?
+        A gateway is I/O bound: it receives a request, forwards it, returns the response.
+        Servlet model: blocks one OS thread per concurrent request → 10k concurrent requests = 10k threads.
+        Reactive model: one thread handles thousands of concurrent requests asynchronously.
+        Gateways have HIGH concurrency (all traffic goes through them) — reactive is critical here.
+
+        IMPORTANT: Because Gateway is reactive, you CANNOT use:
+        - Spring MVC (servlet-based)
+        - spring-boot-starter-web (servlet-based)
+        - javax.servlet (servlet API)
+        Only WebFlux-compatible code works in the Gateway.
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+
+        <!--
+        Eureka Client — registers API Gateway with Eureka.
+        WHY? So API Gateway itself can be discovered (health checked by ops tools).
+        Also: enables load-balanced routing (lb://auth-service in routes).
+        lb:// prefix tells Gateway to use Eureka to find the actual instance.
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
+        <!--
+        Redis Reactive — for rate limiting.
+        WHY reactive version? Gateway is WebFlux-based.
+        The non-reactive spring-boot-starter-data-redis would cause:
+        "Spring MVC found on classpath... gateway requires reactive" — startup failure.
+        Always use *-reactive with Spring Cloud Gateway.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+        </dependency>
+
+        <!--
+        Actuator — /health, /metrics, /gateway/routes endpoints.
+        WHY? Docker healthcheck: curl http://localhost:8080/actuator/health
+        Also: Spring Cloud Gateway exposes /actuator/gateway/routes — shows all configured routes.
+        Invaluable for debugging "why isn't my request routing correctly?"
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Lombok — reduces boilerplate in config classes -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!--
+    Spring Cloud BOM — manages versions of ALL Spring Cloud dependencies.
+    2023.0.0 corresponds to Spring Boot 3.2.x (codename "Leyton").
+    WHY BOM import? Guarantees Eureka Client + Gateway + Reactor versions are compatible.
+    Mismatched Spring Cloud + Boot versions = subtle failures at runtime.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2023.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <!--
+                WHY this plugin?
+                Creates executable "fat JAR" with ALL dependencies bundled.
+                Run with: java -jar api-gateway-0.0.1-SNAPSHOT.jar
+                No classpath setup, no separate dependency installation.
+                Docker CMD/ENTRYPOINT just needs: java -jar app.jar
+                -->
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

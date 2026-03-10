@@ -1,0 +1,50 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: market-service
+    # WHY this name? API Gateway routes /api/markets/** to lb://market-service
+    # This name must match the gateway route uri exactly.
+
+  kafka:
+    # WHY Kafka config here?
+    # PriceSimulatorService publishes stock ticks to 'market.ticks' topic every 1s.
+    # Spring Boot auto-configures KafkaTemplate using these properties,
+    # which our explicit KafkaConfig.java also picks up via @Value.
+    bootstrap-servers: ${KAFKA_URI:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: "1"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# WHY jwt.secret here?
+# PriceAlertController uses JwtUtil to extract userId from the Bearer token.
+# Must match auth-service's jwt.secret exactly (same HMAC-SHA256 signing key).
+# base64("tradeforge-super-secret-jwt-key-change-in-production-min-256-bits")
+jwt:
+  secret: ${JWT_SECRET:dHJhZGVmb3JnZS1zdXBlci1zZWNyZXQtand0LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1taW4tMjU2LWJpdHM=}
+
+logging:
+  level:
+    com.tradeforge: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
