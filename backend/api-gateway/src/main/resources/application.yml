@@ -26,7 +26,7 @@ spring:
 
         # ── Auth Service Route ─────────────────────────────────────────────
         - id: auth-service
-          uri: lb://auth-service
+          uri: ${AUTH_SERVICE_URL:lb://auth-service}
           # WHY lb://auth-service?
           # lb = load balancer. Spring Cloud LoadBalancer queries Eureka for instances.
           # "auth-service" must match spring.application.name in auth-service's application.yml.
@@ -50,7 +50,7 @@ spring:
         # on OTP verification endpoints) without affecting /api/auth/login or /api/auth/register.
         # Both routes point to the same auth-service — no behavior change today.
         - id: auth-2fa-service
-          uri: lb://auth-service
+          uri: ${AUTH_SERVICE_URL:lb://auth-service}
           predicates:
             - Path=/api/auth/2fa/**
           filters:
@@ -58,7 +58,7 @@ spring:
 
         # ── Market Service Route ───────────────────────────────────────────
         - id: market-service
-          uri: lb://market-service
+          uri: ${MARKET_SERVICE_URL:lb://market-service}
           predicates:
             - Path=/api/markets/**
           filters:
@@ -66,7 +66,7 @@ spring:
 
         # ── Order Service Route ────────────────────────────────────────────
         - id: order-service
-          uri: lb://order-service
+          uri: ${ORDER_SERVICE_URL:lb://order-service}
           predicates:
             - Path=/api/orders/**
           filters:
@@ -74,7 +74,7 @@ spring:
 
         # ── Portfolio Service Route ────────────────────────────────────────
         - id: portfolio-service
-          uri: lb://portfolio-service
+          uri: ${PORTFOLIO_SERVICE_URL:lb://portfolio-service}
           predicates:
             - Path=/api/portfolio/**
           filters:
@@ -85,7 +85,7 @@ spring:
         # (Stock Screener + MF Screener pages). Keeping a separate route makes
         # it easy to move to its own service later without changing the frontend.
         - id: screener-service
-          uri: lb://market-service
+          uri: ${MARKET_SERVICE_URL:lb://market-service}
           predicates:
             - Path=/api/screener/**
           filters:
@@ -96,7 +96,7 @@ spring:
         # requires JWT extraction. Separate prefix isolates it from the public
         # market data routes and makes auth middleware addition straightforward.
         - id: alerts-service
-          uri: lb://market-service
+          uri: ${MARKET_SERVICE_URL:lb://market-service}
           predicates:
             - Path=/api/alerts/**
           filters:
@@ -110,15 +110,16 @@ spring:
 # ── Eureka Client ─────────────────────────────────────────────────────────────
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
       # WHY environment variable with default?
       # Docker: EUREKA_URI=http://eureka-server:8761/eureka (container name)
       # Local development: falls back to http://localhost:8761/eureka
-    register-with-eureka: true
+    register-with-eureka: ${EUREKA_ENABLED:true}
     # WHY register? Even the Gateway registers itself.
     # Allows monitoring tools to discover all services including the gateway.
-    fetch-registry: true
+    fetch-registry: ${EUREKA_ENABLED:true}
     # WHY fetch? Gateway needs to know about auth-service, market-service instances.
     # Without fetching the registry, lb://auth-service can't resolve to an IP.
   instance:

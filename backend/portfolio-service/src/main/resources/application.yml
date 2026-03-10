@@ -6,7 +6,9 @@ spring:
     name: portfolio-service
 
   datasource:
-    url: jdbc:postgresql://${DB_URL:localhost:5433}/tradeforge
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/tradeforge}
+    # WHY full JDBC URL in DB_URL? Cloud (Neon.tech) provides a full URL including
+    # sslmode=require. Local dev defaults to the full jdbc URL for same behavior.
     username: ${DB_USER:tradeforge}
     password: ${DB_PASS:tradeforge123}
     driver-class-name: org.postgresql.Driver
@@ -47,10 +49,11 @@ jwt:
 
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
-    register-with-eureka: true
-    fetch-registry: true
+    register-with-eureka: ${EUREKA_ENABLED:true}
+    fetch-registry: ${EUREKA_ENABLED:true}
   instance:
     prefer-ip-address: true
 

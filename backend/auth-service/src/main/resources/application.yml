@@ -116,10 +116,11 @@ app:
 # ── EUREKA CLIENT ────────────────────────────────────────────────────────
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
-    register-with-eureka: true
-    fetch-registry: true
+    register-with-eureka: ${EUREKA_ENABLED:true}
+    fetch-registry: ${EUREKA_ENABLED:true}
   instance:
     prefer-ip-address: true        # WHY? In Docker, container names resolve to IPs.
                                    # Using IP is more reliable than hostname.

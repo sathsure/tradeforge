@@ -83,8 +83,12 @@ public class PriceSimulatorService {
      * fixedDelay waits for the method to complete before counting delay.
      * fixedRate fires at a consistent wall-clock interval, so the schedule
      * stays regular even if a tick takes 50ms to publish.
+     *
+     * WHY fixedRateString? Reads from config property so cloud deployment can slow down
+     * to 300000ms (5 min) to stay within Upstash Kafka free tier (10K messages/day).
+     * Local default stays 1000ms.
      */
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRateString = "${price.simulator.fixed-rate:1000}")
     public void publishTicks() {
         List<StockQuoteDto> quotes = marketDataService.getAllQuotes();
         for (StockQuoteDto quote : quotes) {

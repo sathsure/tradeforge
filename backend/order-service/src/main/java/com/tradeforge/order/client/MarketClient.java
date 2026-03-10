@@ -32,7 +32,9 @@ public class MarketClient {
 
     private final RestTemplate restTemplate;
 
-    @Value("${market.service.url:http://localhost:8083}")
+    // WHY market-service.url? Matches the config key in application.yml so cloud
+    // deployment can inject MARKET_SERVICE_URL (Render URL) without code changes.
+    @Value("${market-service.url:http://localhost:8083}")
     private String marketServiceUrl;
 
     public MarketClient(RestTemplate restTemplate) {

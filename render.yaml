@@ -1,0 +1,141 @@
+# WHY render.yaml? Render Blueprint — defines all services declaratively.
+# One-click deploy: connect GitHub repo → Render reads this file → spins up all services.
+# Alternative: configure each service manually in the Render dashboard.
+services:
+  # ── API Gateway ──────────────────────────────────────────────────────────
+  - type: web
+    name: tradeforge-gateway
+    runtime: docker
+    dockerfilePath: ./backend/api-gateway/Dockerfile
+    dockerContext: ./backend/api-gateway
+    plan: free
+    envVars:
+      - key: EUREKA_ENABLED
+        value: "false"
+      - key: AUTH_SERVICE_URL
+        value: https://tradeforge-auth.onrender.com
+      - key: MARKET_SERVICE_URL
+        value: https://tradeforge-market.onrender.com
+      - key: ORDER_SERVICE_URL
+        value: https://tradeforge-order.onrender.com
+      - key: PORTFOLIO_SERVICE_URL
+        value: https://tradeforge-portfolio.onrender.com
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+    healthCheckPath: /actuator/health
+
+  # ── Auth Service ─────────────────────────────────────────────────────────
+  - type: web
+    name: tradeforge-auth
+    runtime: docker
+    dockerfilePath: ./backend/auth-service/Dockerfile
+    dockerContext: ./backend/auth-service
+    plan: free
+    envVars:
+      - key: EUREKA_ENABLED
+        value: "false"
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: WEBAUTHN_RP_ID
+        sync: false
+      - key: SPRING_PROFILES_ACTIVE
+        value: "default"
+    healthCheckPath: /actuator/health
+
+  # ── Market Service ───────────────────────────────────────────────────────
+  - type: web
+    name: tradeforge-market
+    runtime: docker
+    dockerfilePath: ./backend/market-service/Dockerfile
+    dockerContext: ./backend/market-service
+    plan: free
+    envVars:
+      - key: EUREKA_ENABLED
+        value: "false"
+      - key: KAFKA_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PRICE_SIMULATOR_FIXED_RATE
+        value: "300000"
+    healthCheckPath: /actuator/health
+
+  # ── Order Service ────────────────────────────────────────────────────────
+  - type: web
+    name: tradeforge-order
+    runtime: docker
+    dockerfilePath: ./backend/order-service/Dockerfile
+    dockerContext: ./backend/order-service
+    plan: free
+    envVars:
+      - key: EUREKA_ENABLED
+        value: "false"
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: KAFKA_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MARKET_SERVICE_URL
+        value: https://tradeforge-market.onrender.com
+    healthCheckPath: /actuator/health
+
+  # ── Portfolio Service ────────────────────────────────────────────────────
+  - type: web
+    name: tradeforge-portfolio
+    runtime: docker
+    dockerfilePath: ./backend/portfolio-service/Dockerfile
+    dockerContext: ./backend/portfolio-service
+    plan: free
+    envVars:
+      - key: EUREKA_ENABLED
+        value: "false"
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: KAFKA_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MARKET_SERVICE_URL
+        value: https://tradeforge-market.onrender.com
+    healthCheckPath: /actuator/health
+
+  # ── WebSocket Gateway ────────────────────────────────────────────────────
+  - type: web
+    name: tradeforge-websocket
+    runtime: docker
+    dockerfilePath: ./backend/websocket-gateway/Dockerfile
+    dockerContext: ./backend/websocket-gateway
+    plan: free
+    envVars:
+      - key: EUREKA_ENABLED
+        value: "false"
+      - key: KAFKA_URI
+        sync: false
+    healthCheckPath: /actuator/health

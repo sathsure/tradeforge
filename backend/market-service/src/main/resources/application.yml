@@ -18,12 +18,20 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: "1"
 
+# ── PRICE SIMULATOR CONFIG ────────────────────────────────────────────────
+# WHY configurable rate? Cloud deployment uses 300000ms (5 min) to stay within
+# Upstash Kafka free tier (10K messages/day). Local dev uses 1000ms (1 sec).
+price:
+  simulator:
+    fixed-rate: ${PRICE_SIMULATOR_FIXED_RATE:1000}
+
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
-    register-with-eureka: true
-    fetch-registry: true
+    register-with-eureka: ${EUREKA_ENABLED:true}
+    fetch-registry: ${EUREKA_ENABLED:true}
   instance:
     prefer-ip-address: true
 
