@@ -14,8 +14,10 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
-      port: 6379
+      port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:tradeforge123}
+      ssl:
+        enabled: ${REDIS_SSL:false}
       # WHY Redis in Gateway? Used for rate limiting (RequestRateLimiter filter).
       # Redis tracks request counts per client IP across restarts.
 

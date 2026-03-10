@@ -4,5 +4,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://tradeforge-gateway.onrender.com',
-  wsUrl: 'https://tradeforge-websocket.onrender.com',
+  // WHY wss://? Render serves HTTPS only — WebSocket must use secure wss:// scheme.
+  // /ws is the STOMP endpoint registered in WebSocketConfig.java.
+  wsUrl: 'wss://tradeforge-websocket.onrender.com/ws',
 };

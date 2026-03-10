@@ -10,9 +10,15 @@ spring:
   kafka:
     # WHY Kafka config here?
     # PriceSimulatorService publishes stock ticks to 'market.ticks' topic every 1s.
-    # Spring Boot auto-configures KafkaTemplate using these properties,
-    # which our explicit KafkaConfig.java also picks up via @Value.
+    # Spring Boot auto-configures KafkaTemplate using these properties.
     bootstrap-servers: ${KAFKA_URI:localhost:9092}
+    # WHY KAFKA_SECURITY_PROTOCOL env var? Local Kafka = PLAINTEXT (no auth).
+    # Upstash Kafka (cloud free tier) = SASL_SSL with SCRAM-SHA-256.
+    # Setting via env var keeps the same application.yml for both environments.
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer

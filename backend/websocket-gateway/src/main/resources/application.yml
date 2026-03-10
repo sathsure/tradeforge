@@ -11,6 +11,10 @@ spring:
     # market-service publishes one tick per stock per second.
     # websocket-gateway broadcasts these via STOMP to Angular clients.
     bootstrap-servers: ${KAFKA_URI:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     consumer:
       group-id: websocket-gateway
       auto-offset-reset: latest

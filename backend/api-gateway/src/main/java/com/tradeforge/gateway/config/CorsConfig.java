@@ -38,13 +38,14 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // WHY specific origin (not *)?
+        // WHY setAllowedOriginPatterns (not setAllowedOrigins)?
         // allowCredentials: true is incompatible with wildcard origin (*).
-        // The CORS spec prohibits it — browser rejects it.
-        // Must list each allowed origin explicitly.
-        config.setAllowedOrigins(List.of(
-            "http://localhost:4200"  // Angular dev server
-            // TODO: Add production domain: "https://app.tradeforge.com"
+        // setAllowedOriginPatterns supports wildcards AND allowCredentials together.
+        // This allows Vercel preview URLs (tradeforge-*.vercel.app) without listing each one.
+        config.setAllowedOriginPatterns(List.of(
+            "http://localhost:4200",            // Angular dev server
+            "https://tradeforge.vercel.app",    // Vercel production frontend
+            "https://tradeforge-*.vercel.app"   // Vercel preview deployments
         ));
 
         // WHY OPTIONS in allowed methods?
