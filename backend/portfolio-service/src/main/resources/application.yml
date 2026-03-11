@@ -1,5 +1,6 @@
 server:
-  port: 8085
+  port: ${PORT:8085}
+  # WHY ${PORT:8085}? Render injects PORT — service must bind to it. Falls back to 8085 locally.
 
 spring:
   application:

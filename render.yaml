@@ -22,8 +22,14 @@ services:
         value: https://tradeforge-portfolio.onrender.com
       - key: REDIS_HOST
         sync: false
+      - key: REDIS_PORT
+        value: "6380"
+        # WHY 6380? Upstash Redis uses port 6380 with TLS. Default 6379 is for plain Redis.
       - key: REDIS_PASSWORD
         sync: false
+      - key: REDIS_SSL
+        value: "true"
+        # WHY true? Upstash requires TLS connections on port 6380.
     healthCheckPath: /actuator/health
 
   # ── Auth Service ─────────────────────────────────────────────────────────
@@ -44,8 +50,12 @@ services:
         sync: false
       - key: REDIS_HOST
         sync: false
+      - key: REDIS_PORT
+        value: "6380"
       - key: REDIS_PASSWORD
         sync: false
+      - key: REDIS_SSL
+        value: "true"
       - key: JWT_SECRET
         sync: false
       - key: SMTP_HOST

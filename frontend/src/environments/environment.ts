@@ -7,7 +7,7 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080',      // API Gateway running locally via Docker
-  wsUrl: 'ws://localhost:8088/ws',      // WebSocket Gateway running locally
-  finnhubKey: 'demo'                    // Free Finnhub demo key for local dev
+  apiUrl: 'https://tradeforge-gateway.onrender.com',  // Deployed API Gateway on Render
+  wsUrl: 'wss://tradeforge-websocket.onrender.com/ws', // Deployed WebSocket Gateway on Render
+  finnhubKey: 'demo'
 };

@@ -1,8 +1,8 @@
 server:
-  port: 8080
-  # WHY 8080? Industry convention for API Gateway / reverse proxy.
-  # Angular points to http://localhost:8080 — the only URL it knows.
-  # All internal service ports (8081, 8083, 8084, 8085) are hidden from Angular.
+  port: ${PORT:8080}
+  # WHY ${PORT:8080}? Render.com injects a PORT env var (defaults to 10000).
+  # Spring Boot must bind to that port or Render's health check times out.
+  # Falls back to 8080 for local development.
 
 spring:
   application:

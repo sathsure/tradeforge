@@ -1,5 +1,7 @@
 server:
-  port: 8081
+  port: ${PORT:8081}
+  # WHY ${PORT:8081}? Render.com injects PORT env var (defaults to 10000).
+  # Falls back to 8081 for local development.
 
 spring:
   profiles:
