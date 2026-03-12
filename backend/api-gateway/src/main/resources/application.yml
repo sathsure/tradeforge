@@ -13,11 +13,14 @@ spring:
   # ── REDIS CONFIG ─────────────────────────────────────────────────────────
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      # WHY url instead of host/port/ssl? Lettuce (reactive) breaks SSL handshake with
+      # Upstash when configured via host+port+ssl.enabled properties — hostname shows
+      # as <unresolved> and ClosedChannelException is thrown before TLS completes.
+      # Using the rediss:// URL scheme lets Lettuce handle TLS natively.
+      # Cloud: REDIS_URL=rediss://:PASSWORD@host:6380
+      # Local: falls back to plain redis://localhost:6379
+      url: ${REDIS_URL:redis://localhost:6379}
       password: ${REDIS_PASSWORD:tradeforge123}
-      ssl:
-        enabled: ${REDIS_SSL:false}
       # WHY Redis in Gateway? Used for rate limiting (RequestRateLimiter filter).
       # Redis tracks request counts per client IP across restarts.
 
