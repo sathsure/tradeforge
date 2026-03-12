@@ -77,10 +77,11 @@ spring:
       # WHY url instead of host/port/ssl? Lettuce connection pooling breaks SSL handshake
       # with Upstash when configured via host+port+ssl properties. Using the rediss:// URL
       # scheme lets Lettuce handle TLS natively without pool interference.
-      # Cloud: REDIS_URL=rediss://:PASSWORD@host:6380
+      # Cloud: REDIS_URL=rediss://:TOKEN@glowing-hound-67336.upstash.io:6379
       # Local: falls back to plain redis://localhost:6379
+      # WHY no separate password field? When password is embedded in the URL, a separate
+      # spring.data.redis.password can conflict with Lettuce's URL parsing. Keep it in URL only.
       url: ${REDIS_URL:redis://localhost:6379}
-      password: ${REDIS_PASSWORD:tradeforge123}
       timeout: 2000ms
 
 # ── JWT SETTINGS ─────────────────────────────────────────────────────────
@@ -143,6 +144,12 @@ management:
       # Spring Mail auto-registers a MailHealthIndicator that tries to connect to SMTP.
       # Without credentials it fails and marks the whole service DOWN.
       # Re-enable when real SMTP creds are configured for production.
+    redis:
+      enabled: false
+      # WHY disabled? The Redis health indicator spams logs every 10s with connection
+      # errors when Upstash DNS doesn't resolve (observed on Render deployment).
+      # Auth-service uses Redis for OTP/refresh tokens — the connection itself is
+      # configured correctly. The health check just adds noise without value here.
 
 logging:
   level:

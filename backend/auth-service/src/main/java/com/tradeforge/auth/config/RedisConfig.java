@@ -1,10 +1,15 @@
 package com.tradeforge.auth.config;
 
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.SocketOptions;
+import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurationBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.time.Duration;
 
 /**
  * WHY RedisConfig?
@@ -47,6 +52,27 @@ public class RedisConfig {
      *   spring.data.redis.host, port, password
      * In Docker: REDIS_HOST environment variable overrides localhost.
      */
+    /**
+     * Sets Lettuce TCP connect timeout to 3 seconds.
+     *
+     * WHY? spring.data.redis.timeout sets the command/read timeout (how long to wait for
+     * a Redis command to complete). It does NOT control the TCP connection timeout.
+     * Without this, Lettuce falls back to the OS-level TCP timeout (~2 minutes) when
+     * the Redis host is unreachable — causing login to hang silently for 2 minutes
+     * before returning an error to the frontend.
+     * 3 seconds = fast failure UX without being too aggressive for cloud Redis.
+     */
+    @Bean
+    public LettuceClientConfigurationBuilderCustomizer lettuceConnectTimeout() {
+        return builder -> builder.clientOptions(
+            ClientOptions.builder()
+                .socketOptions(SocketOptions.builder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build())
+                .build()
+        );
+    }
+
     @Bean
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
         StringRedisTemplate template = new StringRedisTemplate();
