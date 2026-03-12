@@ -27,6 +27,12 @@ spring:
   # ── Spring Cloud Gateway Configuration ─────────────────────────────────────
   cloud:
     gateway:
+      # WHY httpclient timeouts? Render free tier sleeps after 15min inactivity.
+      # Cold start takes ~60s. Without generous timeouts, the gateway's Reactor Netty
+      # client times out before the downstream service wakes up → 502 to the client.
+      httpclient:
+        connect-timeout: 10000      # 10s TCP connect timeout (ms)
+        response-timeout: 120s      # 2min response timeout — covers Render cold start
       routes:
 
         # ── Auth Service Route ─────────────────────────────────────────────
