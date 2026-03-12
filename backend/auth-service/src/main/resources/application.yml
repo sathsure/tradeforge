@@ -67,6 +67,9 @@ spring:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 10000   # WHY? Fail fast if Gmail SMTP unreachable (10s)
+          timeout: 10000             # WHY? Read timeout — abort if Gmail takes >10s to respond
+          writetimeout: 10000        # WHY? Write timeout — abort if sending data stalls
     # WHY spring.mail config? Enables JavaMailSender bean for SMTP email delivery.
     # When two-fa.mock-email=false: SmtpEmailService sends real HTML emails via this config.
     # When two-fa.mock-email=true:  MockEmailService logs OTPs to console (no SMTP used).
@@ -95,8 +98,8 @@ jwt:
 
 # ── TWO-FACTOR AUTHENTICATION CONFIG ─────────────────────────────────────
 two-fa:
-  mock-email: true
-  # WHY true temporarily? Bypasses SMTP to isolate whether the 500 is Redis or SMTP.
+  mock-email: false
+  # WHY false? Real SMTP configured via SMTP_USER/SMTP_PASS env vars on Render.
   # To switch back to console logging: set mock-email=true (MockEmailService takes over).
   # Gmail setup: Google Account → Security → 2-Step Verification → App Passwords → generate 16-char password.
   mock-sms: true
