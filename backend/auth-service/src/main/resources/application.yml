@@ -95,8 +95,8 @@ jwt:
 
 # ── TWO-FACTOR AUTHENTICATION CONFIG ─────────────────────────────────────
 two-fa:
-  mock-email: false
-  # WHY false? Real SMTP is configured — OTPs are sent as HTML emails.
+  mock-email: true
+  # WHY true temporarily? Bypasses SMTP to isolate whether the 500 is Redis or SMTP.
   # To switch back to console logging: set mock-email=true (MockEmailService takes over).
   # Gmail setup: Google Account → Security → 2-Step Verification → App Passwords → generate 16-char password.
   mock-sms: true
