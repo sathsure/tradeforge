@@ -87,6 +87,13 @@ spring:
       url: ${REDIS_URL:redis://localhost:6379}
       timeout: 2000ms
 
+# ── RESEND EMAIL CONFIG ───────────────────────────────────────────────────
+resend:
+  api-key: ${RESEND_API_KEY:}
+  # WHY empty default? When RESEND_API_KEY env var is not set (local dev),
+  # ResendEmailService @ConditionalOnProperty skips this bean.
+  # Set RESEND_API_KEY on Render to activate ResendEmailService.
+
 # ── JWT SETTINGS ─────────────────────────────────────────────────────────
 jwt:
   secret: ${JWT_SECRET:tradeforge-super-secret-jwt-key-change-in-production-min-256-bits}
