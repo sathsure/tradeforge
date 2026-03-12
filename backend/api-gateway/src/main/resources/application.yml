@@ -148,6 +148,12 @@ management:
       enabled: true
       # WHY enable gateway endpoint? Allows runtime inspection and route refresh.
       # POST /actuator/gateway/refresh — reloads routes without restart.
+  health:
+    redis:
+      enabled: false
+      # WHY disabled? No rate-limiting filter is configured in routes yet.
+      # Redis is in the classpath for future rate limiting but not actively used.
+      # Disabling prevents false DOWN status on /actuator/health.
 
 logging:
   level:
