@@ -65,6 +65,29 @@
   color: var(--tf-text-secondary);
 }
 
+.warmup-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: rgba(0, 188, 212, 0.08);
+  border: 1px solid rgba(0, 188, 212, 0.3);
+  border-radius: var(--tf-radius-sm);
+  font-size: 13px;
+  color: var(--tf-cyan);
+
+  .spin-icon {
+    animation: spin 1.5s linear infinite;
+    font-size: 18px;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 .error-alert {
   display: flex;
   align-items: center;

@@ -10,6 +10,13 @@
       <p class="brand-tagline">Join TradeForge — Start trading today</p>
     </div>
 
+    @if (loading$ | async) {
+      <div class="warmup-banner" role="status">
+        <mat-icon class="spin-icon">sync</mat-icon>
+        <span>Connecting to servers… Please keep this page open.</span>
+      </div>
+    }
+
     @if (error$ | async; as error) {
       @if (error && !error.toLowerCase().includes('already registered')) {
         <div class="error-alert" role="alert">

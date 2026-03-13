@@ -11,6 +11,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ThemeService } from './core/services/theme.service';
 import { fromEvent } from 'rxjs';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -33,6 +34,13 @@ export class AppComponent implements OnInit {
     // The store is guaranteed to be ready here.
     // Constructor injection is fine for services, but DOM/store reads need ngOnInit.
     this.themeService.init();
+
+    // WHY warmup ping? Render free-tier services sleep after 15 min of inactivity.
+    // New users have no refreshToken so APP_INITIALIZER never hits the backend.
+    // By pinging /actuator/health on app load, we give Render 60-90s to wake up
+    // all services *before* the user finishes filling out the registration/login form.
+    // fire-and-forget: errors are silently ignored (service may still be waking up).
+    fetch(`${environment.apiUrl}/actuator/health`).catch(() => {});
 
     // WHY listen for visibilitychange? The 24h tf_last_seen expiry should only count
     // when the tab is completely closed — not when it's open but idle.

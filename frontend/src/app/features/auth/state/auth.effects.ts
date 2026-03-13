@@ -102,12 +102,12 @@ export class AuthEffects {
         // mergeMap would fire both — could cause duplicate login attempts.
         // For login, the latest attempt is what matters.
         this.authService.login(request).pipe(
-          // WHY retry on 502/503? Same cold-start reason as register (see register$ above).
+          // WHY retry on 502/503/504? Same cold-start reason as register (see register$ above).
           retry({
-            count: 4,
+            count: 6,
             delay: (error, retryCount) => {
-              if (error.status === 502 || error.status === 503) {
-                return timer(15000);
+              if (error.status === 502 || error.status === 503 || error.status === 504) {
+                return timer(20000);
               }
               return throwError(() => error);
             }
@@ -139,8 +139,8 @@ export class AuthEffects {
             // If we put catchError outside, any error would kill the effect permanently.
             // Inside switchMap: effect survives errors and handles future login attempts.
             const message = error?.error?.message
-              ?? (error.status === 502 || error.status === 503
-                  ? 'Server is starting up — please wait 30 seconds and try again.'
+              ?? (error.status === 502 || error.status === 503 || error.status === 504
+                  ? 'Server is warming up — this can take up to 2 minutes on first visit. Please try again.'
                   : 'Login failed. Please try again.');
             return of(AuthActions.loginFailure({ error: message }));
             // WHY of()? catchError must return an Observable.
@@ -191,18 +191,17 @@ export class AuthEffects {
       ofType(AuthActions.register),
       switchMap(({ request }) =>
         this.authService.register(request).pipe(
-          // WHY retry on 502/503?
+          // WHY retry on 502/503/504?
           // Render free-tier services sleep after 15min inactivity.
-          // First request after sleep returns 502 while the service wakes up (~30-60s).
-          // Retry up to 4 times with 15s delays (total wait: ~60s) to cover cold start.
-          // 502 = Bad Gateway (upstream unreachable), 503 = Service Unavailable (starting up).
+          // Gateway wakes up (~30s) then routes to auth-service which also wakes up (~30s).
+          // Total sequential cold-start: ~90s. 6 retries × 20s = 120s covers both services.
+          // 502 = Bad Gateway (upstream not ready), 503 = Service Unavailable, 504 = Timeout.
           // Any other error (400, 401, 500) is NOT retried — those are real failures.
           retry({
-            count: 4,
+            count: 6,
             delay: (error, retryCount) => {
-              if (error.status === 502 || error.status === 503) {
-                return timer(15000); // WHY 15s? Spring Boot cold start takes ~30-60s total.
-                                     // 4 retries × 15s = 60s coverage for the wake-up window.
+              if (error.status === 502 || error.status === 503 || error.status === 504) {
+                return timer(20000); // 6 retries × 20s = 120s coverage for sequential wake-up.
               }
               return throwError(() => error); // Don't retry 400/401/500 — those are real errors.
             }
@@ -222,8 +221,8 @@ export class AuthEffects {
           ),
           catchError(error => {
             const message = error?.error?.message
-              ?? (error.status === 502 || error.status === 503
-                  ? 'Server is starting up — please wait 30 seconds and try again.'
+              ?? (error.status === 502 || error.status === 503 || error.status === 504
+                  ? 'Server is warming up — this can take up to 2 minutes on first visit. Please try again.'
                   : 'Registration failed. Please try again.');
             return of(AuthActions.registerFailure({ error: message }));
           })
