@@ -1,6 +1,47 @@
 <!-- Dashboard — Trading Command Center -->
 <div class="dashboard">
 
+  <!-- ── Empty state for new users with no investments ───────────────────── -->
+  @if (isNewUser()) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <mat-icon class="empty-main-icon">account_balance_wallet</mat-icon>
+      </div>
+      <h2 class="empty-title">Welcome to TradeForge</h2>
+      <p class="empty-subtitle">
+        Your trading journey begins here.<br>
+        Add funds to start investing in stocks and mutual funds.
+      </p>
+      <div class="empty-actions">
+        <button mat-raised-button color="primary" routerLink="/add-funds" class="empty-btn-primary">
+          <mat-icon>add_circle</mat-icon>
+          Add Funds
+        </button>
+        <button mat-stroked-button routerLink="/markets" class="empty-btn-secondary">
+          <mat-icon>candlestick_chart</mat-icon>
+          Explore Markets
+        </button>
+      </div>
+      <div class="empty-features">
+        <div class="empty-feature">
+          <mat-icon class="ef-icon" style="color: var(--tf-green)">trending_up</mat-icon>
+          <span>Live Market Data</span>
+        </div>
+        <div class="empty-feature">
+          <mat-icon class="ef-icon" style="color: var(--tf-cyan)">flash_on</mat-icon>
+          <span>Instant Orders</span>
+        </div>
+        <div class="empty-feature">
+          <mat-icon class="ef-icon" style="color: var(--tf-green)">security</mat-icon>
+          <span>Secure &amp; Regulated</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Existing content (only shown for users with portfolio) ──────────── -->
+  @if (!isNewUser()) {
+
   <!-- ── Header ──────────────────────────────────────────────────────────── -->
   <header class="dashboard-header">
     <div class="greeting">
@@ -423,5 +464,7 @@
 
     </div>
   }
+
+  } <!-- end @if (!isNewUser()) -->
 
 </div>

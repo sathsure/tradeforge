@@ -4,10 +4,14 @@
 // Benefits: Better tree-shaking (unused code removed from bundle),
 // no need for imports[] and declarations[] NgModule boilerplate.
 
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection, APP_INITIALIZER } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
+import { firstValueFrom, race } from 'rxjs';
+import { AuthActions } from './features/auth/state/auth.actions';
 // WHY provideAnimations (sync) not provideAnimationsAsync?
 // Async animations loads the module lazily — the first render happens before the
 // animation module loads, causing NG05105 "Unexpected synthetic property @fadeIn".
@@ -31,6 +35,27 @@ import { ToastEffects } from './core/state/toast.effects';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    // WHY APP_INITIALIZER? Runs before the router activates any route.
+    // Dispatches restoreSession → effect calls /api/auth/refresh → success populates
+    // isAuthenticated:true in the store → authGuard sees it and allows the route.
+    // Without this: every page refresh sends the user to /auth/login (isAuthenticated starts false).
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (store: Store, actions$: Actions) => () => {
+        store.dispatch(AuthActions.restoreSession());
+        // WHY race? Wait for either success or failure — whichever comes first.
+        // This resolves the APP_INITIALIZER promise and unblocks the router.
+        return firstValueFrom(
+          race(
+            actions$.pipe(ofType(AuthActions.restoreSessionSuccess)),
+            actions$.pipe(ofType(AuthActions.restoreSessionFailure)),
+          )
+        );
+      },
+      deps: [Store, Actions],
+      multi: true,
+    },
+
     // WHY provideZoneChangeDetection with eventCoalescing?
     // Zone.js triggers change detection on every event.
     // eventCoalescing batches multiple events together — fewer re-renders.

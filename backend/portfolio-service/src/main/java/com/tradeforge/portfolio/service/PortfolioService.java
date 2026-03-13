@@ -247,6 +247,10 @@ public class PortfolioService {
                         .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
+        // WHY AVAILABLE_BALANCE (not BigDecimal.ZERO)?
+        // Users with holdings have funds deposited. The ₹1,00,000 initial balance
+        // is the standard paper-trading starting capital. emptyPortfolioSummary()
+        // keeps BigDecimal.ZERO for brand-new users before their first deposit.
         return new PortfolioSummaryDto(
                 totalInvested.setScale(2, RoundingMode.HALF_UP),
                 currentValue.setScale(2, RoundingMode.HALF_UP),
@@ -254,7 +258,7 @@ public class PortfolioService {
                 totalPnlPct.setScale(2, RoundingMode.HALF_UP),
                 dayPnl.setScale(2, RoundingMode.HALF_UP),
                 dayPnlPct.setScale(2, RoundingMode.HALF_UP),
-                BigDecimal.ZERO
+                AVAILABLE_BALANCE
         );
     }
 

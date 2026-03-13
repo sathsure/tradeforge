@@ -17,6 +17,7 @@ import { PortfolioActions } from '../../features/portfolio/state/portfolio.actio
 import { selectAllHoldings } from '../../features/portfolio/state/portfolio.selectors';
 import { NotificationService } from './notification.service';
 import { NotificationType } from '../models/market.models';
+import { MarketHoursService } from './market-hours.service';
 
 export interface PriceTick {
   symbol: string;
@@ -41,6 +42,10 @@ export class WebSocketService implements OnDestroy {
   // We call NotificationService.add() so the bell badge increments and the
   // panel shows the alert — without the component needing to know about WS.
   private readonly notifSvc  = inject(NotificationService);
+  // WHY inject MarketHoursService?
+  // Gate live price dispatches — prices should not update outside trading hours,
+  // just like real brokerage platforms (Zerodha, Kite, Groww).
+  private readonly marketHours = inject(MarketHoursService);
 
   private client!: Client;
   private stompSubscriptions = new Map<string, StompSubscription>();
@@ -199,6 +204,10 @@ export class WebSocketService implements OnDestroy {
       (message) => {
         try {
           const tick: PriceTick = JSON.parse(message.body);
+
+          // WHY market hours gate? Prices should not tick outside NSE trading hours.
+          // Mirrors real brokerage UX (Zerodha, Groww) where live updates stop at 3:30 PM.
+          if (!this.marketHours.isOpen()) return;
 
           // Update market watchlist state with live price
           this.store.dispatch(MarketActions.updateQuote({

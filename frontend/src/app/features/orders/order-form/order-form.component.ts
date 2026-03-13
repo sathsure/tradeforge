@@ -7,12 +7,13 @@ import {
   Component, Input, Output, EventEmitter, OnInit, OnChanges,
   inject, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef
 } from '@angular/core';
+
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -22,12 +23,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 
 import { OrderActions } from '../state/order.actions';
 import { OrderRequest, TransactionType } from '../../../core/models/order.models';
 import { selectPlacing, selectError } from '../state/order.selectors';
 import { selectAllQuotes } from '../../markets/state/market.selectors';
 import { StockQuote } from '../../markets/state/market.actions';
+import { selectAvailableBalance } from '../../portfolio/state/portfolio.selectors';
+import { RouterLink } from '@angular/router';
 
 type OrderTypeVal = 'MARKET' | 'LIMIT' | 'SL' | 'SL-M';
 type ValidityVal  = 'DAY' | 'IOC';
@@ -38,10 +42,10 @@ type ExchangeVal  = 'NSE' | 'BSE';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, ReactiveFormsModule, DecimalPipe,
+    CommonModule, ReactiveFormsModule, DecimalPipe, RouterLink,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatButtonToggleModule, MatTooltipModule,
+    MatButtonToggleModule, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="ofc" [class.ofc-buy]="txnType() === 'BUY'" [class.ofc-sell]="txnType() === 'SELL'">
@@ -273,6 +277,32 @@ type ExchangeVal  = 'NSE' | 'BSE';
               </span>
             </div>
           }
+          @if (txnType() === 'BUY') {
+            <div class="ofc-sum-row">
+              <span class="ofc-sum-label">GST (0.18%)</span>
+              <span class="ofc-sum-val text-mono">₹{{ gstAmount() | number:'1.2-2' }}</span>
+            </div>
+            <div class="ofc-sum-row" [class.ofc-sum-row--danger]="insufficientFunds()">
+              <span class="ofc-sum-label" style="font-weight:600">Total Cost</span>
+              <span class="ofc-sum-val text-mono" [class.text-red]="insufficientFunds()">
+                ₹{{ totalCost() | number:'1.2-2' }}
+              </span>
+            </div>
+            <mat-divider style="margin: 8px 0"></mat-divider>
+            <div class="ofc-sum-row">
+              <span class="ofc-sum-label">Available Cash</span>
+              <span class="ofc-sum-val text-mono" [class.text-red]="insufficientFunds()">
+                ₹{{ availableBalance() | number:'1.2-2' }}
+              </span>
+            </div>
+            @if (insufficientFunds()) {
+              <div class="ofc-insufficient-msg">
+                <mat-icon style="font-size:16px;width:16px;height:16px;color:var(--tf-red)">warning</mat-icon>
+                <span>Insufficient funds —</span>
+                <a routerLink="/add-funds" style="color:var(--tf-cyan)">Add funds</a>
+              </div>
+            }
+          }
         </div>
 
         <!-- ── Error ──────────────────────────────────────────────────────── -->
@@ -286,7 +316,7 @@ type ExchangeVal  = 'NSE' | 'BSE';
         <button type="submit" class="ofc-submit"
                 [class.ofc-submit-buy]="txnType() === 'BUY'"
                 [class.ofc-submit-sell]="txnType() === 'SELL'"
-                [disabled]="orderForm.invalid || (placing$ | async)">
+                [disabled]="orderForm.invalid || (placing$ | async) || insufficientFunds()">
           @if (placing$ | async) {
             <mat-spinner diameter="18"></mat-spinner>
           } @else {
@@ -483,6 +513,16 @@ type ExchangeVal  = 'NSE' | 'BSE';
     .ofc-sum-val { font-weight: 600; color: var(--tf-text-primary); }
     .text-cyan { color: var(--tf-cyan); }
 
+    /* Insufficient funds */
+    .ofc-sum-row--danger { background: rgba(248, 81, 73, 0.05); border-radius: 4px; }
+    .ofc-insufficient-msg {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--tf-text-secondary);
+      margin-top: 8px; padding: 6px 8px;
+      background: rgba(248, 81, 73, 0.08);
+      border-radius: 6px; border-left: 3px solid var(--tf-red);
+    }
+
     /* Error */
     .ofc-error-banner {
       display: flex; align-items: center; gap: 8px; padding: 8px 12px;
@@ -549,6 +589,22 @@ export class OrderFormComponent implements OnInit, OnChanges {
       : (this.resolvedQuote()?.price || this.currentPrice || 0);
     return qty * price;
   });
+
+  // WHY toSignal for availableBalance? Avoids async pipe in template; works cleanly
+  // with computed() signals for gstAmount, totalCost, and insufficientFunds.
+  readonly availableBalance = toSignal(this.store.select(selectAvailableBalance), { initialValue: 0 });
+  // WHY 0.18%? NSE charges 0.18% GST on brokerage. This is a simplified flat display.
+  readonly gstAmount = computed(() => this.estimatedValue() * 0.0018);
+  readonly totalCost = computed(() => this.estimatedValue() + this.gstAmount());
+  // WHY only BUY? Selling doesn't require cash — you receive cash.
+  // WHY availableBalance > 0 check? Don't show error for new users with no balance yet
+  // (zero balance before first deposit should not block them with a red error).
+  readonly insufficientFunds = computed(() =>
+    this.txnType() === 'BUY' &&
+    this.totalCost() > 0 &&
+    this.availableBalance() > 0 &&
+    this.totalCost() > this.availableBalance()
+  );
 
   readonly slPlaceholder = computed(() => {
     const p = this.resolvedQuote()?.price || this.currentPrice || 0;

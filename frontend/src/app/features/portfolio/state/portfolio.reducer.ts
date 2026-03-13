@@ -106,4 +106,18 @@ export const portfolioReducer = createReducer(
 
   // ── Cleanup ──────────────────────────────────────────────────────────────
   on(PortfolioActions.clearPortfolio, () => initialState),
+
+  // ── Add Cash ──────────────────────────────────────────────────────────────
+  // WHY optimistic update? The payment gateway response is simulated client-side.
+  // We update the store immediately so the UI reflects the deposit without a
+  // round-trip to the backend. Sprint 5+: call FundsService and use server balance.
+  on(PortfolioActions.addCash, (state, { amount }) => ({
+    ...state,
+    summary: state.summary
+      ? {
+          ...state.summary,
+          availableBalance: (state.summary.availableBalance ?? 0) + amount,
+        }
+      : state.summary,
+  })),
 );

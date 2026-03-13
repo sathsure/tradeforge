@@ -53,5 +53,11 @@ export const PortfolioActions = createActionGroup({
     // ── Cleanup ──────────────────────────────────────────────────────────
     'Clear Portfolio': emptyProps(),
     // Called on logout — don't show another user's portfolio
+
+    // ── Add Cash ─────────────────────────────────────────────────────────
+    // WHY addCash? Mock payment gateway deposits cash into the demat account.
+    // The backend balance ledger is a future sprint. For now we update the store
+    // optimistically so the UI reflects the deposit immediately in the same session.
+    'Add Cash': props<{ amount: number }>(),
   }
 });

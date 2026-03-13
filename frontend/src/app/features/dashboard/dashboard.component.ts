@@ -24,7 +24,8 @@ import { UserInfo } from '../../core/models/auth.models';
 import { PortfolioActions, Holding, PortfolioSummary } from '../portfolio/state/portfolio.actions';
 import { MarketActions } from '../markets/state/market.actions';
 import {
-  selectPortfolioSummary, selectAllHoldings, selectPortfolioLoading
+  selectPortfolioSummary, selectAllHoldings, selectPortfolioLoading,
+  selectIsNewUser, selectAvailableBalance
 } from '../portfolio/state/portfolio.selectors';
 import { selectWatchlistQuotes } from '../markets/state/market.selectors';
 import { StockQuote } from '../markets/state/market.actions';
@@ -544,12 +545,72 @@ import { StockQuote } from '../markets/state/market.actions';
       }
       .pb-s-val { font-size: 16px; }
     }
+
+    /* ── Empty State (new user, no holdings) ─────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 24px;
+      text-align: center;
+      min-height: 60vh;
+    }
+    .empty-icon {
+      width: 96px; height: 96px;
+      border-radius: 50%;
+      background: rgba(0, 212, 170, 0.1);
+      border: 2px solid rgba(0, 212, 170, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 32px;
+    }
+    .empty-main-icon {
+      font-size: 48px; width: 48px; height: 48px;
+      color: var(--tf-cyan);
+    }
+    .empty-title {
+      font-size: 28px; font-weight: 700;
+      color: var(--tf-text-primary);
+      margin: 0 0 12px;
+    }
+    .empty-subtitle {
+      font-size: 16px; color: var(--tf-text-secondary);
+      line-height: 1.6; margin: 0 0 40px;
+      max-width: 360px;
+    }
+    .empty-actions {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      justify-content: center; margin-bottom: 48px;
+    }
+    .empty-btn-primary {
+      padding: 0 28px; height: 48px;
+      font-size: 15px; font-weight: 600;
+    }
+    .empty-btn-secondary {
+      padding: 0 28px; height: 48px;
+      font-size: 15px;
+    }
+    .empty-features {
+      display: flex; gap: 32px; flex-wrap: wrap;
+      justify-content: center;
+    }
+    .empty-feature {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--tf-text-secondary);
+    }
+    .ef-icon { font-size: 18px; width: 18px; height: 18px; }
   `],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
 
   private readonly store  = inject(Store);
   private readonly router = inject(Router);
+
+  // WHY isNewUser / availableBalance as signals?
+  // Drives the empty-state template branch (@if isNewUser()) and the funds display.
+  // toSignal avoids async pipes and plays well with OnPush change detection.
+  readonly isNewUser = toSignal(this.store.select(selectIsNewUser), { initialValue: true });
+  readonly availableBalance = toSignal(this.store.select(selectAvailableBalance), { initialValue: 0 });
 
   // WHY keep Observables alongside signals? The async pipe in the template still needs them.
   // toSignal() versions are used in computed() where the injection context is available.

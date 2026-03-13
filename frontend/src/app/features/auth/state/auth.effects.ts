@@ -19,6 +19,7 @@ import { Store } from '@ngrx/store';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, retry, switchMap, tap, withLatestFrom } from 'rxjs/operators';
 import { of, throwError, timer } from 'rxjs';
+import { UserInfo } from '../../../core/models/auth.models';
 import { AuthActions } from './auth.actions';
 import { AuthService } from '../../../core/services/auth.service';
 import { TwoFactorService } from '../../../core/services/two-factor.service';
@@ -39,6 +40,54 @@ export class AuthEffects {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(Store);
+
+  // ── Session Restore Effect ────────────────────────────────────────────────
+  // WHY restoreSession$? On every page refresh NgRx starts empty (isAuthenticated: false).
+  // authGuard immediately redirects to /auth/login before the user can do anything.
+  // APP_INITIALIZER dispatches AuthActions.restoreSession() first.
+  // This effect reads the refreshToken from localStorage, calls POST /api/auth/refresh,
+  // decodes the new access token's JWT payload for user info, and dispatches success.
+  // The router guard then sees isAuthenticated:true and allows the route.
+  restoreSession$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.restoreSession),
+      switchMap(() => {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          return of(AuthActions.restoreSessionFailure());
+        }
+        // WHY check tf_last_seen? If tab was closed > 24h ago, treat session as expired.
+        const lastSeen = localStorage.getItem('tf_last_seen');
+        if (lastSeen && Date.now() - Number(lastSeen) > 86_400_000) {
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('tf_last_seen');
+          return of(AuthActions.restoreSessionFailure());
+        }
+        return this.authService.refreshToken().pipe(
+          map(accessToken => {
+            // WHY decode JWT locally? Avoids an extra /api/auth/me HTTP call on every refresh.
+            // The JWT payload contains userId, email, fullName, role — all we need for UserInfo.
+            // atob() decodes base64. JWT = header.payload.signature — we take [1].
+            try {
+              const payload = JSON.parse(atob(accessToken.split('.')[1]));
+              const user: UserInfo = {
+                id: payload.userId ?? payload.sub,
+                email: payload.sub,
+                fullName: payload.fullName ?? payload.sub,
+                role: (payload.role ?? 'TRADER') as 'TRADER' | 'ADMIN',
+              };
+              // Refresh the last-seen timestamp on successful restore
+              localStorage.setItem('tf_last_seen', Date.now().toString());
+              return AuthActions.restoreSessionSuccess({ accessToken, user });
+            } catch {
+              return AuthActions.restoreSessionFailure();
+            }
+          }),
+          catchError(() => of(AuthActions.restoreSessionFailure()))
+        );
+      })
+    )
+  );
 
   // ── Login Effect ──────────────────────────────────────────────────────────
   login$ = createEffect(() =>
@@ -113,6 +162,7 @@ export class AuthEffects {
           // Access token is kept only in NgRx memory (lost on refresh) — intentional.
           // Short-lived (15min) access tokens in memory are safer than localStorage.
           localStorage.setItem('refreshToken', response.refreshToken);
+          localStorage.setItem('tf_last_seen', Date.now().toString());
 
           // WHY check returnUrl? authGuard redirects to /auth/login?returnUrl=/portfolio
           // when an unauthenticated user tries to access a protected route directly.
@@ -189,6 +239,7 @@ export class AuthEffects {
         ofType(AuthActions.registerSuccess),
         tap(({ response }) => {
           localStorage.setItem('refreshToken', response.refreshToken);
+          localStorage.setItem('tf_last_seen', Date.now().toString());
           this.router.navigate(['/dashboard']);
         })
       ),
@@ -226,6 +277,7 @@ export class AuthEffects {
       ofType(AuthActions.verifyRegistrationSuccess),
       tap(({ response }) => {
         localStorage.setItem('refreshToken', response.refreshToken);
+        localStorage.setItem('tf_last_seen', Date.now().toString());
         this.router.navigate(['/dashboard']);
       })
     ),
@@ -295,6 +347,7 @@ export class AuthEffects {
         ofType(AuthActions.logoutSuccess),
         tap(() => {
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('tf_last_seen');
           this.router.navigate(['/auth/login']);
         })
       ),
@@ -349,6 +402,7 @@ export class AuthEffects {
       ofType(AuthActions.verifyOtpSuccess),
       tap(({ response }) => {
         localStorage.setItem('refreshToken', response.refreshToken);
+        localStorage.setItem('tf_last_seen', Date.now().toString());
         this.router.navigate(['/dashboard']);
       })
     ),
@@ -374,6 +428,7 @@ export class AuthEffects {
       ofType(AuthActions.verifyWebauthnSuccess),
       tap(({ response }) => {
         localStorage.setItem('refreshToken', response.refreshToken);
+        localStorage.setItem('tf_last_seen', Date.now().toString());
         this.router.navigate(['/dashboard']);
       })
     ),

@@ -103,6 +103,14 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/alerts/alerts.routes').then(m => m.ALERTS_ROUTES),
         title: 'Price Alerts — TradeForge'
+      },
+      {
+        // WHY add-funds under shell? Uses the full app nav chrome.
+        // Accessible via "Add Funds" button in dashboard empty state and order form.
+        path: 'add-funds',
+        loadChildren: () =>
+          import('./features/add-funds/add-funds.routes').then(m => m.ADD_FUNDS_ROUTES),
+        title: 'Add Funds — TradeForge'
       }
     ]
   },

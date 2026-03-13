@@ -1,0 +1,251 @@
+<div class="af-container">
+
+  <!-- Header -->
+  <div class="af-header">
+    <button mat-icon-button routerLink="/dashboard" class="af-back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="af-header-content">
+      <h1 class="af-title">Add Funds</h1>
+      <p class="af-subtitle">Secure • Instant • RBI Regulated</p>
+    </div>
+    <div class="af-balance-chip">
+      <span class="af-balance-label">Available</span>
+      <span class="af-balance-value">₹{{ currentBalance() | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <!-- Step Indicator (Steps 1-3 only) -->
+  @if (step() <= 3) {
+    <div class="af-steps">
+      @for (s of [1,2,3]; track s) {
+        <div class="af-step" [class.af-step--active]="step() === s" [class.af-step--done]="step() > s">
+          <div class="af-step-dot">
+            @if (step() > s) { <mat-icon class="af-step-check">check</mat-icon> }
+            @else { {{ s }} }
+          </div>
+          <span class="af-step-label">{{ s === 1 ? 'Amount' : s === 2 ? 'Method' : 'Pay' }}</span>
+        </div>
+        @if (s < 3) { <div class="af-step-line" [class.af-step-line--done]="step() > s"></div> }
+      }
+    </div>
+  }
+
+  <!-- Step 1: Amount Selection -->
+  @if (step() === 1) {
+    <div class="af-card">
+      <h2 class="af-card-title">How much would you like to add?</h2>
+      <p class="af-card-hint">Minimum ₹100 • Maximum ₹10,00,000 per transaction</p>
+
+      <div class="af-presets">
+        @for (preset of presets; track preset) {
+          <button class="af-preset-chip"
+            [class.af-preset-chip--selected]="selectedAmount() === preset && !customAmount()"
+            (click)="selectPreset(preset)">
+            ₹{{ preset | number }}
+          </button>
+        }
+      </div>
+
+      <div class="af-custom-input">
+        <label class="af-input-label">Or enter custom amount</label>
+        <div class="af-input-wrap">
+          <span class="af-rupee">₹</span>
+          <input class="af-input"
+            type="number"
+            placeholder="0"
+            [value]="customAmount()"
+            (input)="onCustomAmount($any($event.target).value)"
+            min="100" max="1000000">
+        </div>
+      </div>
+
+      @if (finalAmount() > 0) {
+        <div class="af-amount-display">
+          <span class="af-amount-num">₹{{ finalAmount() | number:'1.0-0' }}</span>
+          <span class="af-amount-words">will be added to your TradeForge wallet</span>
+        </div>
+      }
+
+      <button mat-raised-button color="primary" class="af-proceed-btn"
+        [disabled]="!amountValid()"
+        (click)="proceed()">
+        Continue
+        <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- Step 2: Payment Method -->
+  @if (step() === 2) {
+    <div class="af-card">
+      <h2 class="af-card-title">Choose payment method</h2>
+      <p class="af-card-hint">Adding <strong style="color:var(--tf-cyan)">₹{{ finalAmount() | number:'1.0-0' }}</strong> to your account</p>
+
+      <div class="af-methods">
+        @for (method of paymentMethods; track method.id) {
+          <div class="af-method-card"
+            [class.af-method-card--selected]="selectedMethod() === method.id"
+            (click)="selectMethod(method.id)"
+            matRipple>
+            <div class="af-method-icon-wrap" [style.background]="method.color + '22'" [style.border-color]="method.color + '44'">
+              <mat-icon [style.color]="method.color">{{ method.icon }}</mat-icon>
+            </div>
+            <div class="af-method-info">
+              <span class="af-method-label">{{ method.label }}</span>
+              <span class="af-method-sub">{{ method.sublabel }}</span>
+            </div>
+            <div class="af-method-check" [class.af-method-check--visible]="selectedMethod() === method.id">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="af-btn-row">
+        <button mat-stroked-button (click)="step.set(1)">Back</button>
+        <button mat-raised-button color="primary" class="af-proceed-btn-sm"
+          [disabled]="!methodSelected()" (click)="proceed()">
+          Continue <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Step 3: Payment Details -->
+  @if (step() === 3) {
+    <div class="af-card">
+      <h2 class="af-card-title">{{ getMethodLabel(selectedMethod()!) }} Details</h2>
+      <div class="af-amount-badge">₹{{ finalAmount() | number:'1.0-0' }}</div>
+
+      <!-- UPI Form -->
+      @if (selectedMethod() === 'upi') {
+        <div class="af-upi-logos">
+          <span class="af-upi-logo gpay">G Pay</span>
+          <span class="af-upi-logo phonepe">PhonePe</span>
+          <span class="af-upi-logo bhim">BHIM</span>
+        </div>
+        <form [formGroup]="upiForm" class="af-form">
+          <mat-form-field appearance="outline" class="af-field-full">
+            <mat-label>UPI ID</mat-label>
+            <input matInput formControlName="upiId" placeholder="yourname@upi">
+            <mat-icon matSuffix>qr_code_2</mat-icon>
+            @if (upiForm.get('upiId')?.hasError('required') && upiForm.get('upiId')?.touched) {
+              <mat-error>UPI ID is required</mat-error>
+            }
+            @if (upiForm.get('upiId')?.hasError('pattern') && upiForm.get('upiId')?.touched) {
+              <mat-error>Enter a valid UPI ID (e.g., name&#64;upi)</mat-error>
+            }
+          </mat-form-field>
+        </form>
+      }
+
+      <!-- Net Banking -->
+      @if (selectedMethod() === 'netbanking') {
+        <div class="af-banks">
+          @for (bank of ['SBI', 'HDFC', 'ICICI', 'Axis', 'Kotak']; track bank) {
+            <div class="af-bank-chip">{{ bank }}</div>
+          }
+          <div class="af-bank-chip af-bank-chip--more">+ More</div>
+        </div>
+        <p class="af-netbanking-hint">You will be redirected to your bank's secure portal to complete payment.</p>
+      }
+
+      <!-- Card Form (Credit / Debit) -->
+      @if (selectedMethod() === 'credit' || selectedMethod() === 'debit') {
+        <div class="af-card-visual">
+          <div class="af-card-chip"></div>
+          <div class="af-card-number text-mono">
+            {{ (cardForm.get('cardNumber')?.value || '').slice(0, 4) || '****' }}
+            {{ (cardForm.get('cardNumber')?.value || '').slice(4, 8) || '****' }}
+            {{ (cardForm.get('cardNumber')?.value || '').slice(8, 12) || '****' }}
+            {{ (cardForm.get('cardNumber')?.value || '').slice(12, 16) || '****' }}
+          </div>
+          <div class="af-card-meta">
+            <span>{{ cardForm.get('name')?.value || 'CARDHOLDER NAME' }}</span>
+            <span>{{ cardForm.get('expiry')?.value || 'MM/YY' }}</span>
+          </div>
+        </div>
+
+        <form [formGroup]="cardForm" class="af-form">
+          <mat-form-field appearance="outline" class="af-field-full">
+            <mat-label>Card Number</mat-label>
+            <input matInput formControlName="cardNumber" placeholder="1234 5678 9012 3456"
+              maxlength="16" (input)="formatCard($event)">
+            <mat-icon matSuffix>credit_card</mat-icon>
+          </mat-form-field>
+          <div class="af-field-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Expiry (MM/YY)</mat-label>
+              <input matInput formControlName="expiry" placeholder="MM/YY" maxlength="5" (input)="formatExpiry($event)">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>CVV</mat-label>
+              <input matInput formControlName="cvv" type="password" placeholder="•••" maxlength="4">
+            </mat-form-field>
+          </div>
+          <mat-form-field appearance="outline" class="af-field-full">
+            <mat-label>Name on Card</mat-label>
+            <input matInput formControlName="name" placeholder="JOHN DOE">
+          </mat-form-field>
+        </form>
+      }
+
+      <div class="af-secure-badge">
+        <mat-icon style="color: var(--tf-green); font-size: 18px">lock</mat-icon>
+        <span>256-bit SSL encrypted • PCI DSS compliant</span>
+      </div>
+
+      <div class="af-btn-row">
+        <button mat-stroked-button (click)="step.set(2)">Back</button>
+        <button mat-raised-button color="primary" class="af-proceed-btn-sm" (click)="pay()">
+          Pay ₹{{ finalAmount() | number:'1.0-0' }}
+          <mat-icon>lock</mat-icon>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Step 4: Processing -->
+  @if (step() === 4) {
+    <div class="af-card af-card--center">
+      <mat-spinner diameter="64" color="accent"></mat-spinner>
+      <h2 class="af-processing-title">Processing your payment...</h2>
+      <p class="af-processing-sub">Please do not close this page</p>
+      <div class="af-processing-banks">
+        <span>Connecting to payment gateway</span>
+        <span class="af-dots"><span>.</span><span>.</span><span>.</span></span>
+      </div>
+    </div>
+  }
+
+  <!-- Step 5: Success -->
+  @if (step() === 5) {
+    <div class="af-card af-card--center af-success">
+      <div class="af-success-icon">
+        <mat-icon>check_circle</mat-icon>
+      </div>
+      <h2 class="af-success-title">Payment Successful!</h2>
+      <div class="af-success-amount">₹{{ finalAmount() | number:'1.0-0' }}</div>
+      <p class="af-success-sub">has been added to your TradeForge account</p>
+      <div class="af-success-meta">
+        <div class="af-success-meta-row">
+          <span>New Balance</span>
+          <span class="text-mono" style="color:var(--tf-green)">₹{{ currentBalance() | number:'1.2-2' }}</span>
+        </div>
+        <div class="af-success-meta-row">
+          <span>Transaction ID</span>
+          <span class="text-mono" style="font-size:11px">{{ transactionId() }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="primary" class="af-proceed-btn" (click)="goToDashboard()">
+        <mat-icon>dashboard</mat-icon>
+        Go to Dashboard
+      </button>
+      <button mat-stroked-button style="margin-top:12px" (click)="step.set(1)">
+        Add More Funds
+      </button>
+    </div>
+  }
+
+</div>

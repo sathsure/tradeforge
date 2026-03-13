@@ -10,6 +10,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ThemeService } from './core/services/theme.service';
+import { fromEvent } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -32,5 +33,16 @@ export class AppComponent implements OnInit {
     // The store is guaranteed to be ready here.
     // Constructor injection is fine for services, but DOM/store reads need ngOnInit.
     this.themeService.init();
+
+    // WHY listen for visibilitychange? The 24h tf_last_seen expiry should only count
+    // when the tab is completely closed — not when it's open but idle.
+    // Whenever the user brings the tab back into focus, update tf_last_seen so the
+    // 24h window resets. The session stays alive as long as the tab is open.
+    fromEvent(document, 'visibilitychange').subscribe(() => {
+      if (!document.hidden) {
+        const token = localStorage.getItem('refreshToken');
+        if (token) localStorage.setItem('tf_last_seen', Date.now().toString());
+      }
+    });
   }
 }

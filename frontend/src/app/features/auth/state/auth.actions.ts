@@ -19,7 +19,7 @@ import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import {
   LoginRequest, RegisterRequest, AuthResponse,
   TwoFactorMethod, OtpVerifyRequest, WebAuthnAssertionPayload,
-  RegistrationVerifyRequest
+  RegistrationVerifyRequest, UserInfo
 } from '../../../core/models/auth.models';
 
 export const AuthActions = createActionGroup({
@@ -108,5 +108,13 @@ export const AuthActions = createActionGroup({
 
     'Registration Cancel': emptyProps(),
     // User clicks "Back to registration" from verify screen — clears pending state.
+
+    // ── SESSION RESTORE FLOW ───────────────────────────────────────────────
+    // Dispatched by APP_INITIALIZER on every page load/refresh.
+    // Effect reads refreshToken from localStorage and calls /api/auth/refresh.
+    // On success, the user is immediately authenticated without going to /auth/login.
+    'Restore Session': emptyProps(),
+    'Restore Session Success': props<{ accessToken: string; user: UserInfo }>(),
+    'Restore Session Failure': emptyProps(),
   }
 });

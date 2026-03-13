@@ -57,3 +57,28 @@ export const selectIsPortfolioProfitable = createSelector(
   selectPortfolioSummary,
   (summary) => summary ? summary.totalPnl > 0 : null
 );
+
+// WHY selectAvailableBalance? Used by order-form (Feature 7) to show/block
+// BUY orders when the user has insufficient funds.
+// Also used by add-funds page to display current balance.
+export const selectAvailableBalance = createSelector(
+  selectPortfolioSummary,
+  (summary) => summary?.availableBalance ?? 0
+);
+
+// WHY selectIsNewUser? Drives the empty-state dashboard (Feature 3).
+// True when the user has no holdings AND has not invested anything yet.
+// Avoids showing "Add Funds" empty state to returning traders who have a portfolio.
+export const selectIsNewUser = createSelector(
+  selectAllHoldings,
+  selectPortfolioSummary,
+  (holdings, summary) =>
+    holdings.length === 0 && (summary?.totalInvested ?? 0) === 0
+);
+
+// WHY selectHasHoldings? Convenience selector — avoids using holdings.length > 0
+// in multiple components. Semantically clearer than checking array length.
+export const selectHasHoldings = createSelector(
+  selectAllHoldings,
+  (holdings) => holdings.length > 0
+);

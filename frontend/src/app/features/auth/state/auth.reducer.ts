@@ -228,4 +228,23 @@ export const authReducer = createReducer(
 
   on(AuthActions.registrationCancel, () => initialState),
   // WHY initialState? Cancel means "abandon registration". Clear pending state.
+
+  // ── SESSION RESTORE ───────────────────────────────────────────────────────
+  // WHY not set loading:true on restoreSession?
+  // The APP_INITIALIZER blocks the router until success/failure resolves.
+  // Setting loading here would show a spinner over nothing — the router hasn't
+  // activated any route yet. The existing state is fine as-is.
+  on(AuthActions.restoreSessionSuccess, (state, { accessToken, user }) => ({
+    ...state,
+    isAuthenticated: true,
+    accessToken,
+    user,
+    loading: false,
+    error: null,
+  })),
+  on(AuthActions.restoreSessionFailure, () => ({
+    ...initialState,
+    // WHY initialState? Restore failed = no valid session. Start fresh.
+    // Router will redirect to /auth/login via authGuard.
+  })),
 );

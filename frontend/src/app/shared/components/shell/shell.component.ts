@@ -14,6 +14,7 @@ import { MatButtonModule }  from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatBadgeModule }   from '@angular/material/badge';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { AuthActions }                        from '../../../features/auth/state/auth.actions';
 import { selectCurrentUser, selectAccessToken } from '../../../features/auth/state/auth.selectors';
@@ -21,6 +22,9 @@ import { UserInfo }                           from '../../../core/models/auth.mo
 import { NotificationService }                from '../../../core/services/notification.service';
 import { WebSocketService }                   from '../../../core/services/websocket.service';
 import { NotificationPanelComponent }         from '../notification-panel/notification-panel.component';
+import { MarketHoursService }                 from '../../../core/services/market-hours.service';
+import { IdleService }                        from '../../../core/services/idle.service';
+import { IdleTimeoutDialogComponent }         from '../idle-timeout-dialog/idle-timeout-dialog.component';
 
 interface NavItem {
   label: string;
@@ -41,6 +45,7 @@ interface NavItem {
     MatTooltipModule,
     MatDividerModule,
     MatBadgeModule,
+    MatDialogModule,
     NotificationPanelComponent,
   ],
   templateUrl: './shell.component.html',
@@ -59,8 +64,18 @@ export class ShellComponent implements OnInit, OnDestroy {
   // Shell also subscribes to the user's notification topic so price alerts
   // are delivered no matter which page the user is on.
   private readonly wsSvc    = inject(WebSocketService);
+  // WHY inject MarketHoursService here?
+  // MarketHoursService is the single source of truth for market open/closed status.
+  // ShellComponent uses it via the marketOpen alias to drive the status dot in the template.
+  readonly marketHours = inject(MarketHoursService);
+  private readonly dialog = inject(MatDialog);
+  // WHY inject IdleService? Shell is the outermost authenticated component.
+  // Starting idle monitoring here ensures it covers ALL authenticated pages.
+  // When the user logs in and shell mounts, idle tracking begins automatically.
+  private readonly idleSvc = inject(IdleService);
   private clockSub?: Subscription;
   private wsSub?: Subscription;
+  private idleSub?: Subscription;
 
   currentUser$: Observable<UserInfo | null> = this.store.select(selectCurrentUser);
 
@@ -74,6 +89,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Mutual Funds', icon: 'account_balance',   path: '/mutual-funds' },
     { label: 'Orders',       icon: 'receipt_long',      path: '/orders'       },
     { label: 'Portfolio',    icon: 'pie_chart',         path: '/portfolio'    },
+    { label: 'Add Funds',    icon: 'add_card',          path: '/add-funds'    },
     { label: 'Alerts',       icon: 'notifications_active', path: '/alerts'    },
     { label: 'Settings',     icon: 'settings',          path: '/settings'     },
     // WHY Settings at the bottom? Convention from Kite, Robinhood, Zerodha —
@@ -86,8 +102,10 @@ export class ShellComponent implements OnInit, OnDestroy {
   // Using a plain property + manual change detection would be more complex.
   currentTime = signal<Date>(new Date());
 
-  // Whether the market is currently open (IST 9:15 AM – 3:30 PM, Mon–Fri)
-  marketOpen = signal<boolean>(false);
+  // WHY alias to marketHours.isOpen?
+  // MarketHoursService owns the market open/close logic and updates every 30s.
+  // Making marketOpen a direct alias avoids duplicating the update logic here.
+  readonly marketOpen = this.marketHours.isOpen;
 
   ngOnInit(): void {
     // WHY interval(1000)?
@@ -97,12 +115,10 @@ export class ShellComponent implements OnInit, OnDestroy {
     // WHY subscription + OnDestroy? Must unsubscribe when shell is destroyed.
     // Without unsubscribe: memory leak — interval keeps firing after logout.
     this.clockSub = interval(1000).subscribe(() => {
-      const now = new Date();
-      this.currentTime.set(now);
-      this.marketOpen.set(this.isMarketOpen(now));
+      // WHY only update currentTime? MarketHoursService handles market open/close status
+      // at 30s granularity — no need to update it every second from here.
+      this.currentTime.set(new Date());
     });
-    // Set initial market status immediately (don't wait 1 second)
-    this.marketOpen.set(this.isMarketOpen(new Date()));
 
     // ── WebSocket + Notification subscription ───────────────────────────────
     // WHY combineLatest? We need BOTH the token (to authenticate WS) AND the user
@@ -127,33 +143,39 @@ export class ShellComponent implements OnInit, OnDestroy {
         this.wsSvc.subscribeToNotifications(user.id);
       }
     });
+
+    // ── Idle Timeout Monitoring (Feature 2) ─────────────────────────────────
+    // WHY start here? Shell is the root authenticated component.
+    // Starting idle monitoring here means it covers every page the user visits.
+    this.idleSvc.startWatching();
+    this.idleSub = this.idleSvc.idle$.subscribe(() => {
+      // Open the idle warning dialog — user must respond within 30s or be logged out
+      const ref = this.dialog.open(IdleTimeoutDialogComponent, {
+        width: '400px',
+        disableClose: true, // WHY? User must explicitly respond — can't dismiss by clicking outside
+        panelClass: 'tf-dialog',
+      });
+      ref.afterClosed().subscribe((result: 'stay' | 'signout' | 'timeout') => {
+        if (result === 'stay') {
+          // User is still active — reset the idle timer
+          this.idleSvc.reset();
+        } else {
+          // 'signout' or 'timeout' — log the user out for security
+          this.store.dispatch(AuthActions.logout());
+        }
+      });
+    });
   }
 
   ngOnDestroy(): void {
     this.clockSub?.unsubscribe();
     this.wsSub?.unsubscribe();
+    this.idleSub?.unsubscribe();
+    // WHY stopWatching? Prevents IdleService from continuing to track events after logout.
+    // Without this, the timer fires even on the login page and the dialog would open there.
+    this.idleSvc.stopWatching();
     // WHY optional chaining (.?)? Shell might be destroyed before subscription is set.
     // Defensive programming: always clean up observables to prevent memory leaks.
-  }
-
-  // WHY separate method?
-  // Keeps the business logic (market hours) out of the template and ngOnInit.
-  // Testable: we can unit test isMarketOpen() independently.
-  private isMarketOpen(now: Date): boolean {
-    const day = now.getDay(); // 0=Sun, 6=Sat
-    if (day === 0 || day === 6) return false; // Weekend
-
-    // Convert to IST (UTC+5:30) for correct market hours check
-    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const ist = new Date(utcMs + (5.5 * 3600000));
-    const h = ist.getHours();
-    const m = ist.getMinutes();
-    const totalMinutes = h * 60 + m;
-
-    // NSE market hours: 9:15 AM – 3:30 PM IST
-    const marketStart = 9 * 60 + 15;   // 555
-    const marketEnd   = 15 * 60 + 30;  // 930
-    return totalMinutes >= marketStart && totalMinutes < marketEnd;
   }
 
   toggleNotifPanel(): void {
