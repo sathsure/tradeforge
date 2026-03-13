@@ -21,6 +21,11 @@ spring:
       # Local: falls back to plain redis://localhost:6379
       # WHY no separate password? Embedded in URL to avoid Lettuce conflict.
       url: ${REDIS_URL:redis://localhost:6379}
+      # WHY 10s? Upstash SSL handshake on cold start takes 3-8s. 2s was too short.
+      timeout: 10000ms
+      connect-timeout: 10000ms
+      lettuce:
+        shutdown-timeout: 500ms
       # WHY Redis in Gateway? Used for rate limiting (RequestRateLimiter filter).
       # Redis tracks request counts per client IP across restarts.
 

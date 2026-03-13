@@ -85,7 +85,15 @@ spring:
       # WHY no separate password field? When password is embedded in the URL, a separate
       # spring.data.redis.password can conflict with Lettuce's URL parsing. Keep it in URL only.
       url: ${REDIS_URL:redis://localhost:6379}
-      timeout: 2000ms
+      # WHY 10s? On Render free-tier cold start, Upstash SSL handshake + AUTH can
+      # take 3-8 seconds. The old 2s timed out before the handshake completed,
+      # crashing registration with "Unable to connect to Redis". 10s is safe headroom.
+      timeout: 10000ms
+      connect-timeout: 10000ms
+      lettuce:
+        # WHY shutdown-timeout 500ms? Prevents 10s delay on app shutdown that Render
+        # mistakenly treats as a failed health check during the next deploy.
+        shutdown-timeout: 500ms
 
 # ── RESEND EMAIL CONFIG ───────────────────────────────────────────────────
 resend:
