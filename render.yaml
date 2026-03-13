@@ -52,11 +52,13 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      # WHY RESEND_API_KEY?
-      # Render blocks outbound SMTP ports (25, 465, 587) to prevent spam.
-      # ResendEmailService uses HTTP (port 443) instead — never blocked.
-      # Without this key, ResendEmailService bean does NOT load (@ConditionalOnProperty)
-      # and SmtpEmailService is used instead — which hangs/fails on Render.
+      # WHY BREVO_API_KEY? Brevo free tier sends to ANY recipient (300/day).
+      # Resend free tier only sends to the account owner's email — unusable for real users.
+      # BrevoEmailService loads when this key is set and takes priority over Resend.
+      # Setup: brevo.com → Settings → Senders → verify your Gmail → API Keys → copy key
+      - key: BREVO_API_KEY
+        sync: false
+      # WHY RESEND_API_KEY kept? Falls back to Resend if BREVO_API_KEY is not set.
       - key: RESEND_API_KEY
         sync: false
       - key: WEBAUTHN_RP_ID

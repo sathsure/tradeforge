@@ -95,12 +95,19 @@ spring:
         # mistakenly treats as a failed health check during the next deploy.
         shutdown-timeout: 500ms
 
+# ── BREVO EMAIL CONFIG ────────────────────────────────────────────────────
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  # WHY Brevo instead of Resend? Resend free tier only sends to the account owner's email.
+  # Brevo free tier (300/day) sends to ANY recipient once the sender email is verified.
+  # Setup: brevo.com → Settings → Senders & IP → verify sender → Settings → API Keys → copy key
+  # Set BREVO_API_KEY on Render to activate BrevoEmailService (takes priority over Resend).
+
 # ── RESEND EMAIL CONFIG ───────────────────────────────────────────────────
 resend:
   api-key: ${RESEND_API_KEY:}
-  # WHY empty default? When RESEND_API_KEY env var is not set (local dev),
-  # ResendEmailService @ConditionalOnProperty skips this bean.
-  # Set RESEND_API_KEY on Render to activate ResendEmailService.
+  # WHY kept as fallback? If BREVO_API_KEY is not set but RESEND_API_KEY is, Resend is used.
+  # Note: Resend free tier only delivers to the account owner's email (satheesh14294@gmail.com).
 
 # ── JWT SETTINGS ─────────────────────────────────────────────────────────
 jwt:
