@@ -10,7 +10,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
-import { firstValueFrom, race } from 'rxjs';
+import { firstValueFrom, race, of } from 'rxjs';
+import { timeout, catchError } from 'rxjs/operators';
 import { AuthActions } from './features/auth/state/auth.actions';
 // WHY provideAnimations (sync) not provideAnimationsAsync?
 // Async animations loads the module lazily — the first render happens before the
@@ -49,6 +50,17 @@ export const appConfig: ApplicationConfig = {
           race(
             actions$.pipe(ofType(AuthActions.restoreSessionSuccess)),
             actions$.pipe(ofType(AuthActions.restoreSessionFailure)),
+          ).pipe(
+            // WHY timeout + catchError?
+            // APP_INITIALIZER runs very early — if NgRx effects haven't subscribed yet
+            // when restoreSession is dispatched, the race never resolves and the app
+            // hangs forever with a blank screen.
+            // 8s timeout guarantees the app always bootstraps regardless of timing.
+            timeout(8000),
+            catchError(() => {
+              store.dispatch(AuthActions.restoreSessionFailure());
+              return of(null);
+            })
           )
         );
       },
