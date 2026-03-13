@@ -9,5 +9,12 @@ export const environment = {
   production: false,
   apiUrl: 'https://tradeforge-gateway.onrender.com',  // Deployed API Gateway on Render
   wsUrl: 'wss://tradeforge-websocket.onrender.com/ws', // Deployed WebSocket Gateway on Render
-  finnhubKey: 'demo'
+  finnhubKey: 'demo',
+  warmupUrls: [
+    'https://tradeforge-gateway.onrender.com/actuator/health',
+    'https://tradeforge-auth.onrender.com/actuator/health',
+    'https://tradeforge-order.onrender.com/actuator/health',
+    'https://tradeforge-portfolio.onrender.com/actuator/health',
+    'https://tradeforge-market.onrender.com/actuator/health',
+  ],
 };

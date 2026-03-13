@@ -35,12 +35,15 @@ export class AppComponent implements OnInit {
     // Constructor injection is fine for services, but DOM/store reads need ngOnInit.
     this.themeService.init();
 
-    // WHY warmup ping? Render free-tier services sleep after 15 min of inactivity.
-    // New users have no refreshToken so APP_INITIALIZER never hits the backend.
-    // By pinging /actuator/health on app load, we give Render 60-90s to wake up
-    // all services *before* the user finishes filling out the registration/login form.
-    // fire-and-forget: errors are silently ignored (service may still be waking up).
-    fetch(`${environment.apiUrl}/actuator/health`).catch(() => {});
+    // WHY ping ALL warmupUrls? Each Render free-tier service sleeps independently.
+    // Pinging only the gateway wakes it, but auth-service / order-service / portfolio-service
+    // each have their own sleep timer. If auth-service is still cold when the user submits
+    // the registration form, the gateway returns 502 ("Bad Gateway") to the user.
+    // Firing all pings in parallel at app load gives every service 60-90s to wake up
+    // while the user reads the page / fills the form. Fire-and-forget: CORS blocks are
+    // expected (the server still receives the TCP request and wakes up even if CORS rejects
+    // the response in the browser).
+    environment.warmupUrls.forEach(url => fetch(url).catch(() => {}));
 
     // WHY listen for visibilitychange? The 24h tf_last_seen expiry should only count
     // when the tab is completely closed — not when it's open but idle.
