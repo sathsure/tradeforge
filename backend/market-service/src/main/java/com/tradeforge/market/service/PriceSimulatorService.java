@@ -1,6 +1,5 @@
 package com.tradeforge.market.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradeforge.market.dto.StockQuoteDto;
 import org.slf4j.Logger;
@@ -92,45 +91,54 @@ public class PriceSimulatorService {
     public void publishTicks() {
         List<StockQuoteDto> quotes = marketDataService.getAllQuotes();
         for (StockQuoteDto quote : quotes) {
-            double currentPrice = quote.price();
-            double previousClose = quote.previousClose();
+            // WHY per-stock try-catch? If one stock's tick processing throws (e.g., a bad
+            // price value causes NaN, or checkAlerts throws for a specific alert), the exception
+            // must not abort the entire loop. Without this, all remaining stocks miss their tick
+            // for that second — market data freezes for every symbol after the failing one.
+            try {
+                double currentPrice = quote.price();
+                double previousClose = quote.previousClose();
 
-            // Random walk: Gaussian random with mean=0, std=VOLATILITY
-            double change = currentPrice * VOLATILITY * random.nextGaussian();
+                // Random walk: Gaussian random with mean=0, std=VOLATILITY
+                double change = currentPrice * VOLATILITY * random.nextGaussian();
 
-            // Cap drift from previous close to ±MAX_DRIFT_PCT
-            double newPrice = currentPrice + change;
-            double maxPrice = previousClose * (1 + MAX_DRIFT_PCT);
-            double minPrice = previousClose * (1 - MAX_DRIFT_PCT);
-            newPrice = Math.min(Math.max(newPrice, minPrice), maxPrice);
+                // Cap drift from previous close to ±MAX_DRIFT_PCT
+                double newPrice = currentPrice + change;
+                double maxPrice = previousClose * (1 + MAX_DRIFT_PCT);
+                double minPrice = previousClose * (1 - MAX_DRIFT_PCT);
+                newPrice = Math.min(Math.max(newPrice, minPrice), maxPrice);
 
-            // Round to 2 decimal places — matches real exchange tick size
-            newPrice = Math.round(newPrice * 100.0) / 100.0;
+                // Round to 2 decimal places — matches real exchange tick size
+                newPrice = Math.round(newPrice * 100.0) / 100.0;
 
-            // Update in-memory state so REST API always returns fresh prices
-            marketDataService.applyTick(quote.symbol(), newPrice);
+                // Update in-memory state so REST API always returns fresh prices
+                marketDataService.applyTick(quote.symbol(), newPrice);
 
-            // WHY check alerts here? After each tick, evaluate if any user alert conditions
-            // have been met. Fired alerts are published to Kafka and removed (one-shot).
-            priceAlertService.checkAlerts(quote.symbol(), newPrice);
+                // WHY check alerts here? After each tick, evaluate if any user alert conditions
+                // have been met. Fired alerts are published to Kafka and removed (one-shot).
+                priceAlertService.checkAlerts(quote.symbol(), newPrice);
 
-            // Get the updated quote (with recalculated change/changePercent)
-            marketDataService.getQuote(quote.symbol()).ifPresent(updated -> {
-                try {
-                    // WHY JSON string as Kafka value?
-                    // Kafka messages are byte arrays. JSON is a universal format
-                    // that any consumer (WebSocket gateway) can deserialize.
-                    // Alternative: Avro (schema registry) — overkill for dev.
-                    String json = objectMapper.writeValueAsString(updated);
+                // Get the updated quote (with recalculated change/changePercent)
+                marketDataService.getQuote(quote.symbol()).ifPresent(updated -> {
+                    try {
+                        // WHY JSON string as Kafka value?
+                        // Kafka messages are byte arrays. JSON is a universal format
+                        // that any consumer (WebSocket gateway) can deserialize.
+                        // Alternative: Avro (schema registry) — overkill for dev.
+                        String json = objectMapper.writeValueAsString(updated);
 
-                    // WHY use symbol as the Kafka key?
-                    // Kafka partitions messages by key. Same symbol → same partition → ordered delivery.
-                    // All ticks for RELIANCE are consumed in order by the WebSocket gateway.
-                    kafkaTemplate.send(MARKET_TICKS_TOPIC, updated.symbol(), json);
-                } catch (JsonProcessingException e) {
-                    log.error("Failed to serialize tick for {}: {}", quote.symbol(), e.getMessage());
-                }
-            });
+                        // WHY use symbol as the Kafka key?
+                        // Kafka partitions messages by key. Same symbol → same partition → ordered delivery.
+                        // All ticks for RELIANCE are consumed in order by the WebSocket gateway.
+                        kafkaTemplate.send(MARKET_TICKS_TOPIC, updated.symbol(), json);
+                    } catch (Exception e) {
+                        log.error("Failed to serialize/publish tick for {}: {}", quote.symbol(), e.getMessage());
+                    }
+                });
+            } catch (Exception e) {
+                log.error("Tick processing failed for {} — skipping this stock for this cycle: {}",
+                        quote.symbol(), e.getMessage());
+            }
         }
     }
 }

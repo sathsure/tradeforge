@@ -108,8 +108,11 @@ public class ResendEmailService implements EmailService {
                     .toBodilessEntity();
             log.info("Email sent via Resend to: {}", toEmail);
         } catch (Exception e) {
-            log.error("Resend API call failed for {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("Failed to send email via Resend", e);
+            // WHY not re-throw? Callers (AuthService, TwoFactorService) catch email failures
+            // and log the OTP as a fallback. Re-throwing would crash registration/2FA with 500.
+            // Resend free-tier restriction: can only send to the account owner's verified email.
+            // Any other recipient causes 422 → we must never let that block the auth flow.
+            log.error("Resend API call failed for {} — email not delivered: {}", toEmail, e.getMessage());
         }
     }
 

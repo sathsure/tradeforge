@@ -1,6 +1,5 @@
 package com.tradeforge.order.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradeforge.order.client.MarketClient;
 import com.tradeforge.order.dto.OrderEventDto;
@@ -227,6 +226,12 @@ public class OrderService {
      * the event is eventually published even if Kafka is temporarily down.
      */
     private void publishOrderEvent(Order order) {
+        // WHY catch Exception (not just JsonProcessingException)?
+        // kafkaTemplate.send() can throw RuntimeException (KafkaProducerException) when
+        // Kafka is unavailable. Without this broad catch, the unchecked exception propagates
+        // through @Transactional placeOrder() and ROLLS BACK the already-saved order —
+        // the user sees a 500 while the order was actually placed and then deleted. Silent data loss.
+        // Broad catch ensures the order save is always committed; Kafka failure is only logged.
         try {
             OrderEventDto event = new OrderEventDto(
                     order.getId(),
@@ -244,8 +249,9 @@ public class OrderService {
             // on the same user's holdings from concurrent order events.
             kafkaTemplate.send(ORDER_EVENTS_TOPIC, order.getUserId().toString(), json);
             log.info("Published order event for order {}", order.getId());
-        } catch (JsonProcessingException e) {
-            log.error("Failed to publish order event for order {}: {}", order.getId(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to publish order event for order {} — portfolio may be stale: {}",
+                    order.getId(), e.getMessage());
         }
     }
 }
