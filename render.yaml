@@ -20,16 +20,12 @@ services:
         value: https://tradeforge-order.onrender.com
       - key: PORTFOLIO_SERVICE_URL
         value: https://tradeforge-portfolio.onrender.com
-      - key: REDIS_HOST
+      # WHY REDIS_URL (not REDIS_HOST/PORT/PASS/SSL)?
+      # api-gateway application.yml reads ${REDIS_URL} — a single connection string.
+      # Upstash format: rediss://:TOKEN@host.upstash.io:6379
+      # The rediss:// scheme activates TLS — Lettuce handles it natively.
+      - key: REDIS_URL
         sync: false
-      - key: REDIS_PORT
-        value: "6380"
-        # WHY 6380? Upstash Redis uses port 6380 with TLS. Default 6379 is for plain Redis.
-      - key: REDIS_PASSWORD
-        sync: false
-      - key: REDIS_SSL
-        value: "true"
-        # WHY true? Upstash requires TLS connections on port 6380.
     healthCheckPath: /actuator/health
 
   # ── Auth Service ─────────────────────────────────────────────────────────
@@ -48,21 +44,20 @@ services:
         sync: false
       - key: DB_PASS
         sync: false
-      - key: REDIS_HOST
+      # WHY REDIS_URL (not REDIS_HOST/PORT/PASS/SSL)?
+      # auth-service application.yml reads ${REDIS_URL} — a single connection string.
+      # Upstash format: rediss://:TOKEN@host.upstash.io:6379
+      # Using the URL scheme lets Lettuce handle TLS natively without pool issues.
+      - key: REDIS_URL
         sync: false
-      - key: REDIS_PORT
-        value: "6380"
-      - key: REDIS_PASSWORD
-        sync: false
-      - key: REDIS_SSL
-        value: "true"
       - key: JWT_SECRET
         sync: false
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
+      # WHY RESEND_API_KEY?
+      # Render blocks outbound SMTP ports (25, 465, 587) to prevent spam.
+      # ResendEmailService uses HTTP (port 443) instead — never blocked.
+      # Without this key, ResendEmailService bean does NOT load (@ConditionalOnProperty)
+      # and SmtpEmailService is used instead — which hangs/fails on Render.
+      - key: RESEND_API_KEY
         sync: false
       - key: WEBAUTHN_RP_ID
         sync: false

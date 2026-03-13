@@ -17,8 +17,8 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { catchError, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { catchError, map, retry, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { of, throwError, timer } from 'rxjs';
 import { AuthActions } from './auth.actions';
 import { AuthService } from '../../../core/services/auth.service';
 import { TwoFactorService } from '../../../core/services/two-factor.service';
@@ -52,6 +52,16 @@ export class AuthEffects {
         // mergeMap would fire both — could cause duplicate login attempts.
         // For login, the latest attempt is what matters.
         this.authService.login(request).pipe(
+          // WHY retry on 502/503? Same cold-start reason as register (see register$ above).
+          retry({
+            count: 4,
+            delay: (error, retryCount) => {
+              if (error.status === 502 || error.status === 503) {
+                return timer(15000);
+              }
+              return throwError(() => error);
+            }
+          }),
           map(response =>
             // WHY check requiresVerification first?
             // If the user registered but never verified, login also returns 202 with
@@ -78,7 +88,10 @@ export class AuthEffects {
             // WHY catchError inside switchMap?
             // If we put catchError outside, any error would kill the effect permanently.
             // Inside switchMap: effect survives errors and handles future login attempts.
-            const message = error?.error?.message ?? 'Login failed. Please try again.';
+            const message = error?.error?.message
+              ?? (error.status === 502 || error.status === 503
+                  ? 'Server is starting up — please wait 30 seconds and try again.'
+                  : 'Login failed. Please try again.');
             return of(AuthActions.loginFailure({ error: message }));
             // WHY of()? catchError must return an Observable.
             // of() wraps a single value in an Observable that completes immediately.
@@ -124,6 +137,22 @@ export class AuthEffects {
       ofType(AuthActions.register),
       switchMap(({ request }) =>
         this.authService.register(request).pipe(
+          // WHY retry on 502/503?
+          // Render free-tier services sleep after 15min inactivity.
+          // First request after sleep returns 502 while the service wakes up (~30-60s).
+          // Retry up to 4 times with 15s delays (total wait: ~60s) to cover cold start.
+          // 502 = Bad Gateway (upstream unreachable), 503 = Service Unavailable (starting up).
+          // Any other error (400, 401, 500) is NOT retried — those are real failures.
+          retry({
+            count: 4,
+            delay: (error, retryCount) => {
+              if (error.status === 502 || error.status === 503) {
+                return timer(15000); // WHY 15s? Spring Boot cold start takes ~30-60s total.
+                                     // 4 retries × 15s = 60s coverage for the wake-up window.
+              }
+              return throwError(() => error); // Don't retry 400/401/500 — those are real errors.
+            }
+          }),
           map(response =>
             // WHY check requiresVerification?
             // Backend returns HTTP 202 with requiresVerification:true when the account
@@ -138,7 +167,10 @@ export class AuthEffects {
               : AuthActions.registerSuccess({ response })
           ),
           catchError(error => {
-            const message = error?.error?.message ?? 'Registration failed. Please try again.';
+            const message = error?.error?.message
+              ?? (error.status === 502 || error.status === 503
+                  ? 'Server is starting up — please wait 30 seconds and try again.'
+                  : 'Registration failed. Please try again.');
             return of(AuthActions.registerFailure({ error: message }));
           })
         )
