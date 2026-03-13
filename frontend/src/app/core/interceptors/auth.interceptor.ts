@@ -28,15 +28,18 @@ export const authInterceptor: HttpInterceptorFn = (
   const authService = inject(AuthService);
 
   // Skip auth endpoints — they don't need tokens (and don't have them yet).
-  // WHY also skip verify-registration and resend? These endpoints authenticate
+  // WHY also skip verify-registration, resend, and 2fa? These endpoints authenticate
   // via a short-lived tempToken in the request body, not a Bearer access token.
   // A wrong OTP returns 401 — we must NOT treat that as a session expiry and logout.
+  // WHY '/api/auth/2fa/' (not '/api/2fa/')? All 2FA endpoints live under /api/auth/2fa/*.
+  // The old '/api/2fa/' check never matched — verify-otp 401s would trigger an unwanted
+  // token refresh attempt that dispatched logout() while the user was mid-2FA flow.
   if (req.url.includes('/api/auth/login') ||
       req.url.includes('/api/auth/register') ||
       req.url.includes('/api/auth/refresh') ||
       req.url.includes('/api/auth/verify-registration') ||
       req.url.includes('/api/auth/resend-registration-otp') ||
-      req.url.includes('/api/2fa/')) {
+      req.url.includes('/api/auth/2fa/')) {
     return next(req);
   }
 

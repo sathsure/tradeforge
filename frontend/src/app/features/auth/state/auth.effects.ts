@@ -16,7 +16,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, retry, switchMap, tap, withLatestFrom } from 'rxjs/operators';
 import { of, throwError, timer } from 'rxjs';
 import { AuthActions } from './auth.actions';
@@ -37,6 +37,7 @@ export class AuthEffects {
   private readonly authService = inject(AuthService);
   private readonly twoFactorService = inject(TwoFactorService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly store = inject(Store);
 
   // ── Login Effect ──────────────────────────────────────────────────────────
@@ -113,8 +114,11 @@ export class AuthEffects {
           // Short-lived (15min) access tokens in memory are safer than localStorage.
           localStorage.setItem('refreshToken', response.refreshToken);
 
-          // Navigate to dashboard after successful login
-          this.router.navigate(['/dashboard']);
+          // WHY check returnUrl? authGuard redirects to /auth/login?returnUrl=/portfolio
+          // when an unauthenticated user tries to access a protected route directly.
+          // After login, we send them to their intended destination — not always /dashboard.
+          const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+          this.router.navigateByUrl(returnUrl);
         })
       ),
     { dispatch: false }
