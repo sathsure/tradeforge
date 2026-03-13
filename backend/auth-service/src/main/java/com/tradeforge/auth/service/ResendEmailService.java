@@ -3,8 +3,8 @@ package com.tradeforge.auth.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -30,8 +30,11 @@ import java.util.Map;
  * back to SmtpEmailService or MockEmailService.
  */
 @Service
-@Primary
 @ConditionalOnProperty(name = "resend.api-key")
+@ConditionalOnMissingBean(EmailService.class)
+// WHY no @Primary? BrevoEmailService is @Primary and loads when BREVO_API_KEY is set.
+// If both keys are present, Brevo wins. ResendEmailService only activates when
+// BREVO_API_KEY is absent — it is the fallback, not the preferred implementation.
 public class ResendEmailService implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(ResendEmailService.class);
