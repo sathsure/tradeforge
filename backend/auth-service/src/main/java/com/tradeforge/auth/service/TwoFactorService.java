@@ -147,8 +147,12 @@ public class TwoFactorService {
         switch (config.getMethod()) {
             case EMAIL -> {
                 String otp = otpService.generateAndStoreOtp(user.getId());
-                emailService.sendOtp(user.getEmail(), user.getFullName(), otp);
-                log.debug("Email OTP sent to userId={}", user.getId());
+                try {
+                    emailService.sendOtp(user.getEmail(), user.getFullName(), otp);
+                    log.debug("Email OTP sent to userId={}", user.getId());
+                } catch (Exception e) {
+                    log.warn("2FA email delivery failed for userId={} — OTP logged: {}", user.getId(), otp);
+                }
             }
             case SMS -> {
                 String phone = user.getPhone();

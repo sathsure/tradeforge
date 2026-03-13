@@ -242,7 +242,18 @@ public class AuthService implements UserDetailsService {
         String otp = otpService.generateAndStoreRegistrationOtp(user.getId());
 
         if ("EMAIL".equals(channel)) {
-            emailService.sendRegistrationOtp(user.getEmail(), user.getFullName(), otp);
+            // WHY try-catch around email? Resend free-tier only allows sending to your
+            // own verified email. Any other recipient causes a 422/403 from the Resend API,
+            // which previously crashed registration with 500. The OTP is already safely
+            // stored in Redis — email failure should never block the user from proceeding.
+            // We log the OTP to console as a fallback so it can be retrieved from Render logs.
+            try {
+                emailService.sendRegistrationOtp(user.getEmail(), user.getFullName(), otp);
+            } catch (Exception e) {
+                log.warn("Email delivery failed for {} — OTP logged for manual retrieval. Error: {}",
+                        user.getEmail(), e.getMessage());
+                log.info("FALLBACK OTP for {} : {}", user.getEmail(), otp);
+            }
             String masked = maskEmail(user.getEmail());
             String tempToken = jwtService.generateRegistrationTempToken(user, "EMAIL");
             return RegistrationChallengeResponse.builder()
@@ -252,8 +263,14 @@ public class AuthService implements UserDetailsService {
                     .expiresIn(1_800_000L)
                     .build();
         } else {
-            // SMS path
-            smsService.sendOtp(user.getPhone(), otp);
+            // SMS path — also non-fatal
+            try {
+                smsService.sendOtp(user.getPhone(), otp);
+            } catch (Exception e) {
+                log.warn("SMS delivery failed for {} — OTP logged for manual retrieval. Error: {}",
+                        user.getPhone(), e.getMessage());
+                log.info("FALLBACK OTP for {} : {}", user.getPhone(), otp);
+            }
             String masked = maskPhone(user.getPhone());
             String tempToken = jwtService.generateRegistrationTempToken(user, "PHONE");
             return RegistrationChallengeResponse.builder()
