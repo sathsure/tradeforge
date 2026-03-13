@@ -59,25 +59,33 @@ public class ResendEmailService implements EmailService {
     @Override
     public void sendRegistrationOtp(String toEmail, String fullName, String otp) {
         // WHY 30 minutes? Registration OTP TTL matches REGISTER_OTP_TTL in OtpService.
-        send(toEmail,
+        if (!send(toEmail,
                 "Welcome to TradeForge \uD83D\uDE80 — Verify your email",
-                buildOtpHtml(fullName, otp, "email verification", 30));
+                buildOtpHtml(fullName, otp, "email verification", 30))) {
+            // Email failed (e.g. Resend free-tier restriction). Log OTP so it can be
+            // retrieved from Render logs for manual verification during development.
+            log.warn("FALLBACK OTP for {} (registration) : {}", toEmail, otp);
+        }
     }
 
     @Override
     public void sendOtp(String toEmail, String fullName, String otp) {
         // WHY 10 minutes? Login 2FA OTP TTL matches OTP_TTL in OtpService.
-        send(toEmail,
+        if (!send(toEmail,
                 "TradeForge Login Verification Code",
-                buildOtpHtml(fullName, otp, "login verification", 10));
+                buildOtpHtml(fullName, otp, "login verification", 10))) {
+            log.warn("FALLBACK OTP for {} (2FA login) : {}", toEmail, otp);
+        }
     }
 
     @Override
     public void sendEnrollOtp(String toEmail, String fullName, String otp) {
         // WHY 15 minutes? Enrollment OTP TTL matches ENROLL_OTP_TTL in OtpService.
-        send(toEmail,
+        if (!send(toEmail,
                 "Confirm your 2FA enrollment — TradeForge",
-                buildOtpHtml(fullName, otp, "2FA enrollment", 15));
+                buildOtpHtml(fullName, otp, "2FA enrollment", 15))) {
+            log.warn("FALLBACK OTP for {} (2FA enroll) : {}", toEmail, otp);
+        }
     }
 
     // ── Internal Helpers ─────────────────────────────────────────────────────
@@ -92,7 +100,10 @@ public class ResendEmailService implements EmailService {
      * WHY toBodilessEntity()? We only need to know the call succeeded (2xx).
      * The Resend response body contains the email ID which we don't need to store.
      */
-    private void send(String toEmail, String subject, String html) {
+    // WHY boolean return? Lets each caller log the OTP as a fallback when delivery fails,
+    // without throwing an exception that would crash the registration/2FA flow.
+    // true = email delivered, false = Resend API rejected it (caller logs FALLBACK OTP).
+    private boolean send(String toEmail, String subject, String html) {
         Map<String, Object> body = Map.of(
                 "from", FROM,
                 "to", List.of(toEmail),
@@ -107,12 +118,10 @@ public class ResendEmailService implements EmailService {
                     .retrieve()
                     .toBodilessEntity();
             log.info("Email sent via Resend to: {}", toEmail);
+            return true;
         } catch (Exception e) {
-            // WHY not re-throw? Callers (AuthService, TwoFactorService) catch email failures
-            // and log the OTP as a fallback. Re-throwing would crash registration/2FA with 500.
-            // Resend free-tier restriction: can only send to the account owner's verified email.
-            // Any other recipient causes 422 → we must never let that block the auth flow.
             log.error("Resend API call failed for {} — email not delivered: {}", toEmail, e.getMessage());
+            return false;
         }
     }
 
