@@ -118,6 +118,40 @@ spring:
           filters:
             - RewritePath=/api/alerts/(?<segment>.*), /api/alerts/${segment}
 
+        # ── Warmup Routes ──────────────────────────────────────────────────────
+        # WHY warmup routes? Render free-tier services sleep after 15 min inactivity.
+        # The frontend pings these on app load to wake all services in parallel.
+        # Going through the gateway ensures CORS headers are present (CorsWebFilter).
+        # Direct service URLs lack CORS headers → browser blocks the warmup fetch.
+        # Each route rewrites /api/warmup/<service> → /actuator/health on the target.
+        - id: warmup-auth
+          uri: ${AUTH_SERVICE_URL:lb://auth-service}
+          predicates:
+            - Path=/api/warmup/auth
+          filters:
+            - RewritePath=/api/warmup/auth, /actuator/health
+
+        - id: warmup-market
+          uri: ${MARKET_SERVICE_URL:lb://market-service}
+          predicates:
+            - Path=/api/warmup/market
+          filters:
+            - RewritePath=/api/warmup/market, /actuator/health
+
+        - id: warmup-order
+          uri: ${ORDER_SERVICE_URL:lb://order-service}
+          predicates:
+            - Path=/api/warmup/order
+          filters:
+            - RewritePath=/api/warmup/order, /actuator/health
+
+        - id: warmup-portfolio
+          uri: ${PORTFOLIO_SERVICE_URL:lb://portfolio-service}
+          predicates:
+            - Path=/api/warmup/portfolio
+          filters:
+            - RewritePath=/api/warmup/portfolio, /actuator/health
+
       # CORS is handled by CorsWebFilter bean in CorsConfig.java (NOT here).
       # WHY not YAML globalcors? Having BOTH the bean AND YAML causes duplicate
       # Access-Control-Allow-Origin headers → browser blocks the request.

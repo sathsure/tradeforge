@@ -10,11 +10,16 @@ export const environment = {
   // WHY warmupUrls? Each Render free-tier service sleeps independently after 15 min.
   // Pinging only the gateway wakes it but auth-service stays asleep — "Bad Gateway"
   // on first form submit. Listing all service URLs lets app.component.ts wake them all.
+  // WHY gateway URLs instead of direct service URLs?
+  // Direct service URLs (tradeforge-market.onrender.com) have no CORS headers.
+  // Even with mode:'no-cors', Render's load balancer response triggers CORS errors.
+  // Routing through the gateway (/api/warmup/*) means CorsWebFilter adds the header,
+  // and the gateway internally proxies to the real service — waking it up.
   warmupUrls: [
     'https://tradeforge-gateway.onrender.com/actuator/health',
-    'https://tradeforge-auth.onrender.com/actuator/health',
-    'https://tradeforge-order.onrender.com/actuator/health',
-    'https://tradeforge-portfolio.onrender.com/actuator/health',
-    'https://tradeforge-market.onrender.com/actuator/health',
+    'https://tradeforge-gateway.onrender.com/api/warmup/auth',
+    'https://tradeforge-gateway.onrender.com/api/warmup/market',
+    'https://tradeforge-gateway.onrender.com/api/warmup/order',
+    'https://tradeforge-gateway.onrender.com/api/warmup/portfolio',
   ],
 };
