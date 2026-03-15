@@ -12,6 +12,7 @@ import { ActivatedRoute } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -24,6 +25,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarketService } from '../../core/services/market.service';
 import { MutualFund, MFCategory, CandleBar } from '../../core/models/market.models';
 import { PriceChartComponent, ChartPeriod } from '../../shared/components/price-chart/price-chart.component';
+import { OrderActions } from '../orders/state/order.actions';
 
 // Ordered list of categories — controls display order in the page
 const CATEGORY_ORDER: MFCategory[] = ['EQUITY', 'INDEX', 'HYBRID', 'DEBT', 'ELSS'];
@@ -438,11 +440,19 @@ const RISK_COLORS: Record<string, string> = {
                 </div>
                 <div class="mf-tp-footer">
                   <button class="mf-tp-back-btn" (click)="tradeMFMode.set(null)">← Back</button>
-                  <button class="mf-tp-confirm-btn" (click)="tradeMF.set(null); tradeMFMode.set(null)">
+                  <button class="mf-tp-confirm-btn" (click)="confirmMFOrder(fund)">
                     Confirm {{ tradeMFMode() | titlecase }}
                   </button>
                 </div>
               </div>
+            </div>
+          }
+
+          <!-- Order success banner -->
+          @if (mfOrderSuccess()) {
+            <div class="mf-order-success" role="status">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ mfOrderSuccess() }}</span>
             </div>
           }
 
@@ -1138,6 +1148,18 @@ const RISK_COLORS: Record<string, string> = {
       font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
     }
     .mf-tp-confirm-btn:hover { opacity: 0.88; }
+    .mf-tp-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Order success banner */
+    .mf-order-success {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: var(--tf-radius-sm);
+      background: rgba(63, 185, 80, 0.12); border: 1px solid rgba(63, 185, 80, 0.4);
+      color: var(--tf-green); font-size: 13px; font-weight: 500;
+      animation: fpSlideIn 0.25s ease both;
+    }
+    .mf-order-success mat-icon { font-size: 18px; }
+
     .text-green { color: var(--tf-green); }
     .text-red   { color: var(--tf-red); }
     .text-cyan  { color: var(--tf-cyan); }
@@ -1266,9 +1288,12 @@ export class MutualFundsComponent implements OnInit {
 
   private readonly svc   = inject(MarketService);
   private readonly route = inject(ActivatedRoute);
+  private readonly store = inject(Store);
 
   // WHY showTrade? Dashboard source → show Invest/Redeem; Screener source → read-only.
   readonly showTrade = signal(false);
+  // WHY mfOrderSuccess? Show a brief confirmation banner after a successful MF order.
+  readonly mfOrderSuccess = signal<string | null>(null);
   readonly showManagerInfo = signal(false);
   // Trade action + mode for MF
   readonly tradeMF     = signal<'invest' | 'redeem' | null>(null);
@@ -1506,6 +1531,55 @@ export class MutualFundsComponent implements OnInit {
     this.selectedFund.set(null);
     this.navCandles.set([]);
     this.showManagerInfo.set(false);
+    this.mfOrderSuccess.set(null);
+  }
+
+  /**
+   * WHY confirmMFOrder?
+   * Translates the MF trade panel inputs into an order-service OrderRequest and
+   * dispatches it via NgRx. Uses the same order infrastructure as stock trades —
+   * no separate MF order backend needed for this phase.
+   *
+   * WHY use fund.id as symbol?
+   * MF funds don't have stock ticker symbols. We use the fund's unique id so the
+   * order-service can record the MF transaction. The portfolio display maps
+   * fund.id → fund.name for display purposes.
+   *
+   * WHY Math.max(1, quantity)?
+   * If amount < NAV (e.g. ₹500 / ₹1,200 NAV = 0 units), we floor to 1 unit minimum
+   * rather than rejecting — same behavior as most retail MF platforms.
+   */
+  confirmMFOrder(fund: MutualFund): void {
+    const amount = this.mfSipAmt.value ?? 0;
+    const mode   = this.tradeMFMode();
+    const action = this.tradeMF();
+    if (!amount || amount <= 0 || !mode || !action) return;
+
+    // Calculate units: amount ÷ NAV, minimum 1 unit
+    const quantity = Math.max(1, Math.floor(amount / fund.nav));
+    const transactionType = action === 'invest' ? 'BUY' : 'SELL';
+
+    this.store.dispatch(OrderActions.placeOrder({
+      request: {
+        symbol: fund.id,
+        orderType: 'MARKET',
+        transactionType,
+        quantity,
+      }
+    }));
+
+    const modeLabel = mode === 'onetime' ? 'Lump Sum' : mode.toUpperCase();
+    this.mfOrderSuccess.set(
+      `${transactionType === 'BUY' ? 'Buy' : 'Sell'} order placed — ${quantity} unit${quantity !== 1 ? 's' : ''} of ${fund.name} (${modeLabel})`
+    );
+
+    // Close the trade panel after confirming
+    this.tradeMF.set(null);
+    this.tradeMFMode.set(null);
+    this.mfSipAmt.setValue(null);
+
+    // Auto-hide the success banner after 5 seconds
+    setTimeout(() => this.mfOrderSuccess.set(null), 5000);
   }
 
   onNavPeriodChange(period: ChartPeriod): void {

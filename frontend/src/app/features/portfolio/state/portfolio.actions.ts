@@ -55,9 +55,13 @@ export const PortfolioActions = createActionGroup({
     // Called on logout — don't show another user's portfolio
 
     // ── Add Cash ─────────────────────────────────────────────────────────
-    // WHY addCash? Mock payment gateway deposits cash into the demat account.
-    // The backend balance ledger is a future sprint. For now we update the store
-    // optimistically so the UI reflects the deposit immediately in the same session.
+    // WHY three actions for cash deposit?
+    // addCash = user clicked Confirm → triggers the HTTP POST effect
+    // addCashSuccess = backend confirmed the deposit → reducer updates the balance
+    // addCashFailure = backend rejected → reducer shows the error
+    // The optimistic-only pattern was replaced: balance now persists in the DB.
     'Add Cash': props<{ amount: number }>(),
+    'Add Cash Success': props<{ availableBalance: number }>(),
+    'Add Cash Failure': props<{ error: string }>(),
   }
 });

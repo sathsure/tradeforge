@@ -1,7 +1,9 @@
 package com.tradeforge.portfolio.service;
 
 import com.tradeforge.portfolio.dto.*;
+import com.tradeforge.portfolio.entity.CashBalance;
 import com.tradeforge.portfolio.entity.Holding;
+import com.tradeforge.portfolio.repository.CashBalanceRepository;
 import com.tradeforge.portfolio.repository.HoldingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,20 +42,63 @@ public class PortfolioService {
 
     private static final Logger log = LoggerFactory.getLogger(PortfolioService.class);
 
-    // WHY hardcoded balance for Sprint 2?
-    // Real brokerages maintain a funds ledger (deposits, withdrawals, used margin).
-    // Sprint 3: Add a FundsService with Kafka-based balance updates.
-    private static final BigDecimal AVAILABLE_BALANCE = new BigDecimal("100000.00");
+    // WHY default starting balance ₹1,00,000?
+    // New users who haven't made a deposit yet get ₹1,00,000 paper-trading capital.
+    // This is the industry-standard starting amount for demo/paper trading accounts.
+    // Once the user calls /api/portfolio/cash/deposit, their actual DB balance is used.
+    private static final BigDecimal DEFAULT_STARTING_BALANCE = new BigDecimal("100000.00");
 
     private final HoldingRepository holdingRepository;
+    private final CashBalanceRepository cashBalanceRepository;
     private final RestTemplate restTemplate;
 
     @Value("${market-service.url:http://localhost:8083}")
     private String marketServiceUrl;
 
-    public PortfolioService(HoldingRepository holdingRepository, RestTemplate restTemplate) {
+    public PortfolioService(HoldingRepository holdingRepository,
+                            CashBalanceRepository cashBalanceRepository,
+                            RestTemplate restTemplate) {
         this.holdingRepository = holdingRepository;
+        this.cashBalanceRepository = cashBalanceRepository;
         this.restTemplate = restTemplate;
+    }
+
+    /**
+     * Deposits cash into the user's portfolio balance.
+     *
+     * WHY upsert logic (find + create if absent)?
+     * First-time users won't have a cash_balance row yet.
+     * On first deposit, we create the row with (DEFAULT_STARTING_BALANCE + amount).
+     * On subsequent deposits, we add to the existing balance.
+     *
+     * WHY return BigDecimal?
+     * Controller returns the new balance to Angular so the store updates immediately.
+     * No need for a second GET /portfolio call just to refresh the balance.
+     *
+     * @param userId UUID of the user making the deposit
+     * @param amount Amount in INR to add to the cash balance
+     * @return Updated available balance after the deposit
+     */
+    public BigDecimal depositCash(UUID userId, BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be positive");
+        }
+
+        CashBalance cashBalance = cashBalanceRepository.findById(userId)
+                .orElseGet(() -> {
+                    // WHY start from DEFAULT_STARTING_BALANCE for first deposit?
+                    // User already had ₹1L simulated balance. First real deposit ADDS to it.
+                    // This keeps the portfolio consistent — existing holdings are still covered.
+                    CashBalance cb = new CashBalance();
+                    cb.setUserId(userId);
+                    cb.setBalance(DEFAULT_STARTING_BALANCE);
+                    return cb;
+                });
+
+        cashBalance.setBalance(cashBalance.getBalance().add(amount));
+        cashBalanceRepository.save(cashBalance);
+        log.info("Cash deposit: user={} amount={} newBalance={}", userId, amount, cashBalance.getBalance());
+        return cashBalance.getBalance().setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -67,8 +112,13 @@ public class PortfolioService {
     public PortfolioResponse getPortfolio(UUID userId) {
         List<Holding> holdings = holdingRepository.findByUserId(userId);
 
+        // Read cash balance from DB (or fall back to default for new users)
+        BigDecimal availableBalance = cashBalanceRepository.findById(userId)
+                .map(CashBalance::getBalance)
+                .orElse(DEFAULT_STARTING_BALANCE);
+
         if (holdings.isEmpty()) {
-            return new PortfolioResponse(List.of(), emptyPortfolioSummary());
+            return new PortfolioResponse(List.of(), emptyPortfolioSummary(availableBalance));
         }
 
         // Build comma-separated symbol list for market-service query
@@ -80,7 +130,6 @@ public class PortfolioService {
         // WHY call market-service synchronously?
         // Users expect up-to-date P&L when they open the portfolio page.
         // Stale cached data would show wrong gains/losses.
-        // Sprint 3: Cache with Redis TTL=5s to reduce load on market-service.
         Map<String, MarketQuoteDto> quotesBySymbol = fetchQuotes(symbols);
 
         // Enrich holdings with live market data
@@ -88,7 +137,7 @@ public class PortfolioService {
                 .map(h -> enrichHolding(h, quotesBySymbol))
                 .toList();
 
-        PortfolioSummaryDto summary = computeSummary(holdingDtos);
+        PortfolioSummaryDto summary = computeSummary(holdingDtos, availableBalance);
         return new PortfolioResponse(holdingDtos, summary);
     }
 
@@ -221,7 +270,7 @@ public class PortfolioService {
      * Aggregates all holdings into a single summary for the portfolio header.
      * Computed from holdings list (not DB) — always consistent with the enriched data.
      */
-    private PortfolioSummaryDto computeSummary(List<HoldingDto> holdings) {
+    private PortfolioSummaryDto computeSummary(List<HoldingDto> holdings, BigDecimal availableBalance) {
         BigDecimal totalInvested = holdings.stream()
                 .map(h -> h.averagePrice().multiply(BigDecimal.valueOf(h.quantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -247,10 +296,6 @@ public class PortfolioService {
                         .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
-        // WHY AVAILABLE_BALANCE (not BigDecimal.ZERO)?
-        // Users with holdings have funds deposited. The ₹1,00,000 initial balance
-        // is the standard paper-trading starting capital. emptyPortfolioSummary()
-        // keeps BigDecimal.ZERO for brand-new users before their first deposit.
         return new PortfolioSummaryDto(
                 totalInvested.setScale(2, RoundingMode.HALF_UP),
                 currentValue.setScale(2, RoundingMode.HALF_UP),
@@ -258,18 +303,17 @@ public class PortfolioService {
                 totalPnlPct.setScale(2, RoundingMode.HALF_UP),
                 dayPnl.setScale(2, RoundingMode.HALF_UP),
                 dayPnlPct.setScale(2, RoundingMode.HALF_UP),
-                AVAILABLE_BALANCE
+                availableBalance.setScale(2, RoundingMode.HALF_UP)
         );
     }
 
-    private PortfolioSummaryDto emptyPortfolioSummary() {
-        // WHY BigDecimal.ZERO for availableBalance?
-        // New users have no funds deposited yet. A real brokerage shows ₹0 until
-        // the user completes a funds transfer. Sprint 4: add FundsService with deposit/withdraw.
+    private PortfolioSummaryDto emptyPortfolioSummary(BigDecimal availableBalance) {
+        // WHY pass availableBalance in? New users with no holdings still have their cash.
+        // Shows correct deposited funds even when the holdings list is empty.
         return new PortfolioSummaryDto(
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.ZERO
+                availableBalance.setScale(2, RoundingMode.HALF_UP)
         );
     }
 }

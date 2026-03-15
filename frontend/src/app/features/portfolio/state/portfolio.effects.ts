@@ -11,6 +11,10 @@ import { of } from 'rxjs';
 import { PortfolioActions, Holding, PortfolioSummary } from './portfolio.actions';
 import { environment } from '../../../../environments/environment';
 
+interface CashDepositResponse {
+  availableBalance: number;
+}
+
 interface PortfolioApiResponse {
   holdings: Holding[];
   summary: PortfolioSummary;
@@ -21,6 +25,30 @@ export class PortfolioEffects {
 
   private readonly actions$ = inject(Actions);
   private readonly http = inject(HttpClient);
+
+  // ── Add Cash ───────────────────────────────────────────────────────────────
+  // WHY switchMap? If user clicks "Add Cash" twice quickly, only the latest request
+  // completes. Prevents duplicate deposits from double-clicks.
+  addCash$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(PortfolioActions.addCash),
+      switchMap(({ amount }) =>
+        this.http.post<CashDepositResponse>(
+          `${environment.apiUrl}/api/portfolio/cash/deposit`,
+          { amount }
+        ).pipe(
+          map(response => PortfolioActions.addCashSuccess({
+            availableBalance: response.availableBalance
+          })),
+          catchError(error =>
+            of(PortfolioActions.addCashFailure({
+              error: error?.error?.message ?? error?.message ?? 'Failed to add cash'
+            }))
+          )
+        )
+      )
+    )
+  );
 
   // ── Load Portfolio ─────────────────────────────────────────────────────────
   // WHY handle both loadPortfolio and refreshPortfolio?

@@ -108,16 +108,24 @@ export const portfolioReducer = createReducer(
   on(PortfolioActions.clearPortfolio, () => initialState),
 
   // ── Add Cash ──────────────────────────────────────────────────────────────
-  // WHY optimistic update? The payment gateway response is simulated client-side.
-  // We update the store immediately so the UI reflects the deposit without a
-  // round-trip to the backend. Sprint 5+: call FundsService and use server balance.
-  on(PortfolioActions.addCash, (state, { amount }) => ({
+  // WHY no-op on addCash? The effect handles the HTTP call.
+  // We wait for the server response (addCashSuccess) before updating the balance.
+  // This prevents the balance from briefly showing an incorrect value if the
+  // backend rejects the deposit (e.g., invalid amount, auth failure).
+  on(PortfolioActions.addCash, (state) => state),
+
+  // WHY update on addCashSuccess (not addCash)?
+  // The backend returns the authoritative new balance. We use that exact value —
+  // no client-side arithmetic that could drift from the server's ledger.
+  on(PortfolioActions.addCashSuccess, (state, { availableBalance }) => ({
     ...state,
     summary: state.summary
-      ? {
-          ...state.summary,
-          availableBalance: (state.summary.availableBalance ?? 0) + amount,
-        }
+      ? { ...state.summary, availableBalance }
       : state.summary,
   })),
+
+  // WHY no-op on addCashFailure?
+  // Balance stays unchanged — the deposit did not go through.
+  // The component is responsible for showing the error to the user.
+  on(PortfolioActions.addCashFailure, (state) => state),
 );
