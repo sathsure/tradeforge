@@ -4,6 +4,12 @@ server:
   # Falls back to 8081 for local development.
 
 spring:
+  main:
+    lazy-initialization: true
+    # WHY lazy-initialization? Defers bean creation until first use.
+    # Cuts Spring Boot cold-start from ~160s to ~30s on Render free tier,
+    # staying within Render's port scan window. First request is slightly
+    # slower but that's acceptable vs a failed deploy.
   profiles:
     active: dev
     # WHY dev profile? Activates DevController (/api/dev/otp/**) for local development.

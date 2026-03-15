@@ -3,6 +3,10 @@ server:
   # WHY ${PORT:8084}? Render injects PORT — service must bind to it. Falls back to 8084 locally.
 
 spring:
+  main:
+    lazy-initialization: true
+    # WHY lazy-initialization? Cuts cold-start from ~160s to ~30s on Render free tier.
+    # Defers bean creation until first use — stays within Render's port scan window.
   application:
     name: order-service
     # WHY this name? API Gateway routes /api/orders/** to lb://order-service

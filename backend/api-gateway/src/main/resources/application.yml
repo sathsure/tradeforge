@@ -5,6 +5,10 @@ server:
   # Falls back to 8080 for local development.
 
 spring:
+  main:
+    lazy-initialization: true
+    # WHY lazy-initialization? Cuts cold-start from ~160s to ~30s on Render free tier.
+    # Defers bean creation until first use — stays within Render's port scan window.
   application:
     name: api-gateway
     # WHY this name? Registers as "api-gateway" in Eureka.
