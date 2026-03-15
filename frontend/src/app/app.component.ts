@@ -40,10 +40,21 @@ export class AppComponent implements OnInit {
     // each have their own sleep timer. If auth-service is still cold when the user submits
     // the registration form, the gateway returns 502 ("Bad Gateway") to the user.
     // Firing all pings in parallel at app load gives every service 60-90s to wake up
-    // while the user reads the page / fills the form. Fire-and-forget: CORS blocks are
-    // expected (the server still receives the TCP request and wakes up even if CORS rejects
-    // the response in the browser).
-    environment.warmupUrls.forEach(url => fetch(url).catch(() => {}));
+    // while the user reads the page / fills the form.
+    //
+    // WHY mode: 'no-cors'? Individual service URLs (not via the gateway) have no CORS headers.
+    // A regular fetch would throw a CORS error in the browser console even though the TCP
+    // connection succeeds and the service wakes up.
+    // 'no-cors' sends an opaque request — the browser skips CORS validation,
+    // the request reaches the server (waking it), and no console error is produced.
+    // WHY sessionStorage guard? Warmup fires on every page load and navigation event.
+    // If the user refreshes or navigates while services are cold, repeated pings hit a
+    // sleeping Render service simultaneously → Render returns 429 (Too Many Requests).
+    // sessionStorage persists for the browser tab session only — one warmup per tab is enough.
+    if (!sessionStorage.getItem('tf_warmed')) {
+      sessionStorage.setItem('tf_warmed', '1');
+      environment.warmupUrls.forEach(url => fetch(url, { mode: 'no-cors' }).catch(() => {}));
+    }
 
     // WHY listen for visibilitychange? The 24h tf_last_seen expiry should only count
     // when the tab is completely closed — not when it's open but idle.

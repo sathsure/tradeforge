@@ -116,5 +116,11 @@ export const AuthActions = createActionGroup({
     'Restore Session': emptyProps(),
     'Restore Session Success': props<{ accessToken: string; user: UserInfo }>(),
     'Restore Session Failure': emptyProps(),
+
+    // ── UTILITY ────────────────────────────────────────────────────────────
+    // WHY Clear Error? Stale errors from a previous flow (e.g. registerFailure setting
+    // "Email already registered") persist in NgRx and show up on the login page.
+    // Dispatching this on LoginComponent.ngOnInit() wipes the error before the user sees it.
+    'Clear Error': emptyProps(),
   }
 });

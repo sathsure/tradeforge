@@ -8,12 +8,14 @@
 // Tree-shaking removes unused Material modules at build time.
 // Adding MatButtonModule here means ONLY LoginComponent pays for it if no one else imports it.
 
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 // Angular Material imports — each is a separate package for tree-shaking
 import { MatCardModule } from '@angular/material/card';
@@ -52,12 +54,17 @@ export class LoginComponent implements OnInit {
   // Angular 14+ best practice for standalone components.
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
+  private readonly http = inject(HttpClient);
 
   // ── Observables from NgRx Store ──────────────────────────────────────────
   // WHY Observable$ naming convention? Signals to other developers:
   // "this is async — use async pipe in template or subscribe carefully"
   loading$: Observable<boolean> = this.store.select(selectAuthLoading);
   error$: Observable<string | null> = this.store.select(selectAuthError);
+
+  // WHY serverCold signal? Same reason as register — probes auth on init so the
+  // user sees a "server starting" warning BEFORE clicking Sign In.
+  serverCold = signal(false);
 
   // ── Form State ────────────────────────────────────────────────────────────
   hidePassword = true;
@@ -94,8 +101,14 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // If we need to pre-fill form from queryParams (e.g., redirect from register),
-    // we could use ActivatedRoute here. Empty for now.
+    // WHY clear error here? A previous flow (e.g. registerFailure: "Email already registered")
+    // leaves error in the NgRx store. That stale message would appear on this page instantly.
+    // Clearing on init ensures the login page always starts with a clean error state.
+    this.store.dispatch(AuthActions.clearError());
+
+    // Probe auth health — show pre-click warning if server is cold.
+    this.http.get(`${environment.apiUrl}/api/warmup/auth`)
+      .subscribe({ error: () => this.serverCold.set(true) });
   }
 
   // ── Form Submission ───────────────────────────────────────────────────────

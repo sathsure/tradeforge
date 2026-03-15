@@ -229,6 +229,11 @@ export const authReducer = createReducer(
   on(AuthActions.registrationCancel, () => initialState),
   // WHY initialState? Cancel means "abandon registration". Clear pending state.
 
+  // ── CLEAR ERROR ──────────────────────────────────────────────────────────
+  on(AuthActions.clearError, (state) => ({ ...state, error: null })),
+  // WHY? Wipes stale errors (e.g. "Email already registered" from registerFailure)
+  // before they bleed into the login page UI.
+
   // ── SESSION RESTORE ───────────────────────────────────────────────────────
   // WHY not set loading:true on restoreSession?
   // The APP_INITIALIZER blocks the router until success/failure resolves.

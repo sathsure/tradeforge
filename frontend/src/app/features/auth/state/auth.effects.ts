@@ -103,8 +103,9 @@ export class AuthEffects {
         // For login, the latest attempt is what matters.
         this.authService.login(request).pipe(
           // WHY retry on 502/503/504? Same cold-start reason as register (see register$ above).
+          // 9 retries × 20s = 180s total coverage for Render free-tier cold start.
           retry({
-            count: 6,
+            count: 9,
             delay: (error, retryCount) => {
               if (error.status === 502 || error.status === 503 || error.status === 504) {
                 return timer(20000);
@@ -194,14 +195,14 @@ export class AuthEffects {
           // WHY retry on 502/503/504?
           // Render free-tier services sleep after 15min inactivity.
           // Gateway wakes up (~30s) then routes to auth-service which also wakes up (~30s).
-          // Total sequential cold-start: ~90s. 6 retries × 20s = 120s covers both services.
+          // Spring Boot cold-start on Render can take 2-3 min. 9 retries × 20s = 180s covers it.
           // 502 = Bad Gateway (upstream not ready), 503 = Service Unavailable, 504 = Timeout.
           // Any other error (400, 401, 500) is NOT retried — those are real failures.
           retry({
-            count: 6,
+            count: 9,
             delay: (error, retryCount) => {
               if (error.status === 502 || error.status === 503 || error.status === 504) {
-                return timer(20000); // 6 retries × 20s = 120s coverage for sequential wake-up.
+                return timer(20000); // 9 retries × 20s = 180s coverage for sequential wake-up.
               }
               return throwError(() => error); // Don't retry 400/401/500 — those are real errors.
             }

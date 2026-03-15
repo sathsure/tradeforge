@@ -4,12 +4,14 @@
 // (password confirmation, phone number, terms acceptance).
 // Separating them keeps each component focused and testable independently.
 
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, ReactiveFormsModule, FormBuilder, Validators, ValidationErrors } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { HttpClient } from '@angular/common/http';
 import { Observable, Subscription, distinctUntilChanged, filter, skip } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -61,15 +63,28 @@ export class RegisterComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
   private readonly toast = inject(ToastService);
+  private readonly http = inject(HttpClient);
   private errorSub?: Subscription;
 
   loading$: Observable<boolean> = this.store.select(selectAuthLoading);
   error$: Observable<string | null> = this.store.select(selectAuthError);
 
+  // WHY serverCold signal? Probes auth health on component init so we can warn the
+  // user BEFORE they click "Create Account" that a cold start may cause a long wait.
+  // signal() triggers change detection automatically when set from a non-Angular callback.
+  serverCold = signal(false);
+
   hidePassword = true;
   hideConfirm = true;
 
   ngOnInit(): void {
+    // WHY probe auth on init? The warmup banner currently only shows AFTER the user
+    // clicks "Create Account" (when loading$ becomes true). If auth-service is cold,
+    // the user has no warning. Probing here shows "Server starting up" BEFORE they submit.
+    // A 502/error means auth-service is cold; a 200 means it's ready.
+    this.http.get(`${environment.apiUrl}/api/warmup/auth`)
+      .subscribe({ error: () => this.serverCold.set(true) });
+
     // Watch for "Email already registered" error → show red snackbar
     this.errorSub = this.error$.pipe(
       skip(1),
