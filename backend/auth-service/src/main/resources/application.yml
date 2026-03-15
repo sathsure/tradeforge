@@ -111,7 +111,11 @@ resend:
 
 # ── JWT SETTINGS ─────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:tradeforge-super-secret-jwt-key-change-in-production-min-256-bits}
+  # WHY base64 default? auth-service JwtService.getSigningKey() now uses Decoders.BASE64.decode()
+  # to match order-service and portfolio-service exactly. All three services must receive the
+  # SAME base64-encoded JWT_SECRET env var on Render so they derive identical signing keys.
+  # base64("tradeforge-super-secret-jwt-key-change-in-production-min-256-bits")
+  secret: ${JWT_SECRET:dHJhZGVmb3JnZS1zdXBlci1zZWNyZXQtand0LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1taW4tMjU2LWJpdHM=}
   access-token-expiry: 900000       # 15 minutes in ms
   # WHY short expiry? If a token is stolen, it's only valid for 15 min.
   refresh-token-expiry: 604800000   # 7 days in ms

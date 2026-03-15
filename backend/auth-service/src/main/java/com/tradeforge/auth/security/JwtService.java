@@ -275,12 +275,19 @@ public class JwtService {
     }
 
     private SecretKey getSigningKey() {
-        // WHY Keys.hmacShaKeyFor?
-        // Creates a cryptographically proper HMAC-SHA key from our secret string.
-        // Raw string as key is insecure — this ensures proper key derivation.
-        byte[] keyBytes = Decoders.BASE64.decode(
-            java.util.Base64.getEncoder().encodeToString(secretKey.getBytes())
-        );
+        // WHY Decoders.BASE64.decode(secretKey)?
+        // jwt.secret must be a base64-encoded key (set JWT_SECRET env var to the base64 value).
+        // This matches the EXACT method used by order-service and portfolio-service JwtUtil.
+        // All three services must derive the same SecretKey bytes — otherwise a token signed
+        // by auth-service will fail signature verification in order/portfolio, causing 401s.
+        //
+        // WHY not secretKey.getBytes()?
+        // The old approach did Base64.decode(Base64.encode(raw)) = raw bytes of the secret STRING.
+        // order/portfolio do Base64.decode(secret) = bytes of the DECODED secret.
+        // If JWT_SECRET is the same base64 value on all services, these produce different bytes → mismatch.
+        //
+        // Render env var for ALL services: JWT_SECRET = dHJhZGVmb3JnZS1zdXBlci1zZWNyZXQtand0LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1taW4tMjU2LWJpdHM=
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
