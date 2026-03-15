@@ -141,7 +141,7 @@ export class AuthEffects {
             // Inside switchMap: effect survives errors and handles future login attempts.
             const message = error?.error?.message
               ?? (error.status === 502 || error.status === 503 || error.status === 504
-                  ? 'Server is warming up — this can take up to 2 minutes on first visit. Please try again.'
+                  ? 'Trading engine is cold-starting — markets take ~2 min to wake up. Please try again.'
                   : 'Login failed. Please try again.');
             return of(AuthActions.loginFailure({ error: message }));
             // WHY of()? catchError must return an Observable.
@@ -223,7 +223,7 @@ export class AuthEffects {
           catchError(error => {
             const message = error?.error?.message
               ?? (error.status === 502 || error.status === 503 || error.status === 504
-                  ? 'Server is warming up — this can take up to 2 minutes on first visit. Please try again.'
+                  ? 'Trading engine is cold-starting — markets take ~2 min to wake up. Please try again.'
                   : 'Registration failed. Please try again.');
             return of(AuthActions.registerFailure({ error: message }));
           })

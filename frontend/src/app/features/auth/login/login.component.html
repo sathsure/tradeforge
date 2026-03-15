@@ -23,14 +23,10 @@
       Automatically subscribes and unsubscribes. No memory leaks.
       Triggers change detection only when value changes (OnPush compatible).
     -->
-    @if (serverCold() || (loading$ | async)) {
+    @if (serverCold()) {
       <div class="warmup-banner" role="status">
         <mat-icon class="spin-icon">sync</mat-icon>
-        @if (loading$ | async) {
-          <span>Connecting to servers… Please keep this page open.</span>
-        } @else {
-          <span>Server is starting up — first visit may take up to 2 minutes.</span>
-        }
+        <span>Trading engine is cold-starting — first session of the day takes ~2 min. Fill in your credentials.</span>
       </div>
     }
 
