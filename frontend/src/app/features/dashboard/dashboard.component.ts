@@ -580,16 +580,54 @@ import { StockQuote } from '../markets/state/market.actions';
     }
     .empty-actions {
       display: flex; gap: 16px; flex-wrap: wrap;
-      justify-content: center; margin-bottom: 48px;
+      justify-content: center; margin-bottom: 28px;
     }
     .empty-btn-primary {
       padding: 0 28px; height: 48px;
       font-size: 15px; font-weight: 600;
     }
-    .empty-btn-secondary {
+    .empty-btn-mf {
       padding: 0 28px; height: 48px;
-      font-size: 15px;
+      font-size: 15px; font-weight: 600;
+      background: rgba(79,172,254,0.12) !important;
+      color: var(--tf-cyan) !important;
+      border: 1px solid rgba(79,172,254,0.4) !important;
     }
+    .empty-btn-mf:hover { background: rgba(79,172,254,0.22) !important; }
+
+    /* Explore links — catchy discovery rows below the primary CTAs */
+    .empty-explore {
+      display: flex; flex-direction: column; gap: 10px;
+      width: 100%; max-width: 440px; margin-bottom: 40px;
+    }
+    .explore-link {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      background: var(--tf-bg-surface); border: 1px solid var(--tf-border);
+      border-radius: var(--tf-radius-md); text-decoration: none;
+      transition: border-color 0.18s, background 0.18s, transform 0.15s;
+    }
+    .explore-link:hover {
+      border-color: var(--tf-cyan); background: rgba(79,172,254,0.06);
+      transform: translateX(4px);
+    }
+    .explore-link > mat-icon:first-child {
+      font-size: 22px; width: 22px; height: 22px;
+      color: var(--tf-cyan); flex-shrink: 0;
+    }
+    .explore-link-text { display: flex; flex-direction: column; flex: 1; text-align: left; }
+    .explore-link-title {
+      font-size: 14px; font-weight: 600; color: var(--tf-text-primary);
+    }
+    .explore-link-sub {
+      font-size: 11px; color: var(--tf-text-muted); margin-top: 2px;
+    }
+    .explore-link-arrow {
+      font-size: 18px; color: var(--tf-text-muted); flex-shrink: 0;
+      transition: color 0.15s;
+    }
+    .explore-link:hover .explore-link-arrow { color: var(--tf-cyan); }
+
     .empty-features {
       display: flex; gap: 32px; flex-wrap: wrap;
       justify-content: center;
@@ -599,6 +637,11 @@ import { StockQuote } from '../markets/state/market.actions';
       font-size: 13px; color: var(--tf-text-secondary);
     }
     .ef-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    /* Empty holdings inside the Stocks tab (when user has portfolio but no stocks yet) */
+    .empty-holdings-actions {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px;
+    }
   `],
 })
 export class DashboardComponent implements OnInit, OnDestroy {

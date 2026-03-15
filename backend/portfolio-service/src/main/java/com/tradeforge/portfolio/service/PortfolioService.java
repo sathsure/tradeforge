@@ -42,11 +42,11 @@ public class PortfolioService {
 
     private static final Logger log = LoggerFactory.getLogger(PortfolioService.class);
 
-    // WHY default starting balance ₹1,00,000?
-    // New users who haven't made a deposit yet get ₹1,00,000 paper-trading capital.
-    // This is the industry-standard starting amount for demo/paper trading accounts.
-    // Once the user calls /api/portfolio/cash/deposit, their actual DB balance is used.
-    private static final BigDecimal DEFAULT_STARTING_BALANCE = new BigDecimal("100000.00");
+    // WHY ₹0 default?
+    // New users should see ₹0 available cash until they explicitly add funds.
+    // Showing ₹1L by default was confusing — it implied funds were already deposited.
+    // Users add their own cash via POST /api/portfolio/cash/deposit, which persists to the DB.
+    private static final BigDecimal DEFAULT_STARTING_BALANCE = new BigDecimal("0.00");
 
     private final HoldingRepository holdingRepository;
     private final CashBalanceRepository cashBalanceRepository;
@@ -91,7 +91,7 @@ public class PortfolioService {
                     // This keeps the portfolio consistent — existing holdings are still covered.
                     CashBalance cb = new CashBalance();
                     cb.setUserId(userId);
-                    cb.setBalance(DEFAULT_STARTING_BALANCE);
+                    cb.setBalance(BigDecimal.ZERO); // first deposit starts from ₹0
                     return cb;
                 });
 

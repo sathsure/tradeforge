@@ -5,23 +5,46 @@
   @if (isNewUser()) {
     <div class="empty-state">
       <div class="empty-icon">
-        <mat-icon class="empty-main-icon">account_balance_wallet</mat-icon>
+        <mat-icon class="empty-main-icon">rocket_launch</mat-icon>
       </div>
-      <h2 class="empty-title">Welcome to TradeForge</h2>
+      <h2 class="empty-title">Your Portfolio Awaits</h2>
       <p class="empty-subtitle">
-        Your trading journey begins here.<br>
-        Add funds to start investing in stocks and mutual funds.
+        The market is open — make your first move.<br>
+        Pick stocks, start a SIP, or do both.
       </p>
+
+      <!-- Primary CTAs: direct purchase entry points -->
       <div class="empty-actions">
-        <button mat-raised-button color="primary" routerLink="/add-funds" class="empty-btn-primary">
-          <mat-icon>add_circle</mat-icon>
-          Add Funds
-        </button>
-        <button mat-stroked-button routerLink="/markets" class="empty-btn-secondary">
-          <mat-icon>candlestick_chart</mat-icon>
-          Explore Markets
-        </button>
+        <a mat-raised-button color="primary" routerLink="/place-order" class="empty-btn-primary">
+          <mat-icon>add_shopping_cart</mat-icon>
+          Buy Stocks
+        </a>
+        <a mat-raised-button routerLink="/mutual-funds" class="empty-btn-mf">
+          <mat-icon>account_balance</mat-icon>
+          Buy Mutual Funds
+        </a>
       </div>
+
+      <!-- Explore links: discovery before committing -->
+      <div class="empty-explore">
+        <a routerLink="/screener" class="explore-link">
+          <mat-icon>manage_search</mat-icon>
+          <div class="explore-link-text">
+            <span class="explore-link-title">Explore Stocks</span>
+            <span class="explore-link-sub">Scan 15+ NSE large-caps — pick your winners</span>
+          </div>
+          <mat-icon class="explore-link-arrow">chevron_right</mat-icon>
+        </a>
+        <a routerLink="/mutual-funds" class="explore-link">
+          <mat-icon>trending_up</mat-icon>
+          <div class="explore-link-text">
+            <span class="explore-link-title">Explore Mutual Funds</span>
+            <span class="explore-link-sub">Top-rated funds across EQUITY, DEBT, ELSS &amp; more</span>
+          </div>
+          <mat-icon class="explore-link-arrow">chevron_right</mat-icon>
+        </a>
+      </div>
+
       <div class="empty-features">
         <div class="empty-feature">
           <mat-icon class="ef-icon" style="color: var(--tf-green)">trending_up</mat-icon>
@@ -210,8 +233,11 @@
             @if (holdings.length === 0) {
               <div class="empty-holdings">
                 <mat-icon>pie_chart</mat-icon>
-                <p>No holdings yet.</p>
-                <a routerLink="/markets" mat-stroked-button>Browse Markets</a>
+                <p>No stock holdings yet.</p>
+                <div class="empty-holdings-actions">
+                  <a routerLink="/screener" mat-stroked-button>Explore Stocks</a>
+                  <a routerLink="/place-order" mat-raised-button color="primary">Buy Now</a>
+                </div>
               </div>
             } @else {
               <div class="holdings-list">

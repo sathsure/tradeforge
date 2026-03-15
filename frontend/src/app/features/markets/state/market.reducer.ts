@@ -48,19 +48,21 @@ export interface MarketState {
   error: string | null;
 }
 
+// WHY empty symbols? New users should start with blank watchlists — no pre-filled stocks.
+// Pre-filling gives the false impression that these are "recommended" stocks.
+// Users add their own symbols from the Markets / Screener pages.
 const DEFAULT_WATCHLISTS: WatchlistGroup[] = [
-  { name: 'Watchlist 1', symbols: ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'] },
-  { name: 'Watchlist 2', symbols: ['WIPRO', 'BAJFINANCE', 'MARUTI', 'SUNPHARMA', 'TITAN'] },
-  { name: 'Watchlist 3', symbols: ['LTIM', 'AXISBANK', 'KOTAKBANK', 'SBIN', 'HINDUNILVR'] },
+  { name: 'Watchlist 1', symbols: [] },
+  { name: 'Watchlist 2', symbols: [] },
+  { name: 'Watchlist 3', symbols: [] },
 ];
 
 const initialState: MarketState = {
   quotes: {},
   watchlists: DEFAULT_WATCHLISTS,
-  // WHY these 5 as default dashboard pins? Most recognised NSE large-caps —
-  // meaningful for first-time users before they customise.
-  dashboardSymbols: ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'],
-  watchlist: DEFAULT_WATCHLISTS.flatMap(wl => wl.symbols),
+  // WHY empty? Dashboard pin strip is populated by the user, not pre-seeded.
+  dashboardSymbols: [],
+  watchlist: [],
   searchResults: [],
   searchQuery: '',
   loading: false,
